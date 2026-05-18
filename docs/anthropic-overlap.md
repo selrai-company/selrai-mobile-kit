@@ -41,11 +41,39 @@ These are platform features that touch "mobile" but are not mobile-app-building 
 
 ### Expo Agent (April 2026)
 
-The Expo Agent launch ($45M Series B, April 2026) is documented in `docs/prior-art.md` as a "native vibe-coding integration into the Expo CLI surface." The docs.expo.dev fetch was permission-denied during this audit. Capability claims from the Expo Agent's own docs are therefore marked `[CONFIRM]` below:
+The Expo Agent launch ($45M Series B, April 2026) is documented in `docs/prior-art.md`. Second-pass evidence collected 2026-05-18 via `agent.expo.dev` and the `expo/skills` GitHub repo (the source of the Anthropic `expo` plugin):
 
-- [CONFIRM] Expo Agent may ship in-CLI template selection or starter templates via the Expo CLI. Needs live docs verification.
-- [CONFIRM] Expo Agent may include EAS-hosted preview links that approximate or compete with the phone-preview skill. Needs live docs verification.
-- [CONFIRM] Expo Agent may include a non-technical onboarding wizard. No evidence found in Claude Code's own docs. Needs Expo-side confirmation.
+- **`agent.expo.dev` landing page**, verbatim tagline: "Build for Production. Ship. Iterate. Faster." Sign-in via Expo credentials. Targets developers. No mention of domain templates, non-technical onboarding, in-CLI template selection, or EAS-hosted phone preview.
+- **`docs.expo.dev/agent/` returns 404.** Expo Agent has no dedicated docs section under the docs subdomain. Marketing-only landing.
+- **`github.com/expo/skills`** (1,936 stars, pushed 2026-05-16) is the source repo for the official Anthropic `expo` plugin's skills. The plugin ships 14 skills (see Section 1.5 below). None overlap the kit's wedge surface.
+
+The original three `[CONFIRM]` items resolve as follows:
+
+- Expo Agent in-CLI template selection: **No evidence found.** Agent.expo.dev does not advertise it. Closes as WRAP-OK.
+- Expo Agent EAS-hosted preview link competing with phone-preview: **No evidence found.** Closes as WRAP-OK.
+- Expo Agent non-technical onboarding wizard: **No evidence found.** Developer-targeted product per its own marketing. Closes as WRAP-OK.
+
+### 1.5 Official `expo` plugin skill inventory (`github.com/expo/skills/plugins/expo/skills/`)
+
+The 14 skills the Anthropic `expo` plugin ships:
+
+| Skill | Overlaps kit? |
+|---|---|
+| `building-native-ui` | No |
+| `eas-update-insights` | No |
+| `expo-api-routes` | No |
+| `expo-cicd-workflows` | No |
+| `expo-deployment` | No (kit defers app-store deploy to plugin) |
+| `expo-dev-client` | No (kit uses Expo Go, not dev client) |
+| `expo-module` | No |
+| `expo-tailwind-setup` | Partial. Our `/mobile-app-bootstrap` invokes this skill during scaffold. Wrap, not duplicate. |
+| `expo-ui-jetpack-compose` | No |
+| `expo-ui-swift-ui` | No |
+| `native-data-fetching` | No |
+| `upgrading-expo` | Partial. On-demand upgrade. Our installer pins + drift-checks per-install. Different cadence, not overlapping. |
+| `use-dom` | No (Expo Web) |
+
+The kit's 4 skills (`mobile-readiness-check`, `mobile-template-pick`, `mobile-app-bootstrap`, `mobile-phone-preview`) are absent from this set.
 
 ---
 
@@ -83,8 +111,8 @@ Each item cross-referenced to its kit artifact.
 | Pre-install readiness check (non-technical) | No. Plugin assumes tooling is already installed. | Yes. `/mobile-readiness-check` + installer section 1. | WRAP-OK. Pure addition. |
 | Egress allowlist in settings.json | No. Official plugin applies no egress restriction. | Yes. Installer merges 5-host allowlist. | WRAP-OK. Security posture addition. |
 | Mobile push notifications (dev workflow) | Yes. Claude Code Week 16 (https://code.claude.com/docs/en/whats-new/2026-w16). Pings phone when task finishes or Claude needs a decision. | No. Kit does not use or reference Remote Control push. | WRAP-OK. Different surface (dev workflow notification vs app preview). No conflict. |
-| Expo Agent template selection [CONFIRM] | Unknown. Expo Agent launched April 2026 but docs.expo.dev was unavailable during this audit. | Partial. Kit ships 3 templates. May overlap if Expo Agent ships its own domain starters. | RAISE-WITH-GIAN. Verify at docs.expo.dev before Phase 0.2 Day 2 ships. |
-| Expo Agent non-technical onboarding [CONFIRM] | Unknown. Fetch blocked during audit. | Yes. Kit's primary wedge. | RAISE-WITH-GIAN. If Expo Agent ships a wizard, re-evaluate kit's wedge claim. |
+| Expo Agent template selection | No. Verified via `agent.expo.dev` (developer-targeted marketing, no template claim) and `expo/skills` (14 skills, none are template selectors). | Partial. Kit ships 3 domain templates with a local-LLM picker. | WRAP-OK. Closed 2026-05-18. |
+| Expo Agent non-technical onboarding | No. Verified via `agent.expo.dev` (no wizard claim, developer audience explicit) and `expo/skills` (no onboarding wizard skill). | Yes. Kit's primary wedge. | WRAP-OK. Closed 2026-05-18. |
 
 ---
 
@@ -177,7 +205,7 @@ After each run (whether drift was detected or not), the script updates `~/.claud
 
 **SHIP-PHASE-0.2** with three `[CONFIRM]` items that must close before Phase 0.2 Day 2 dispatches the other 3 specialists.
 
-No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is either a pure addition (not shipped by Anthropic) or a legitimate wrap with a documented wedge rationale. The two `RAISE-WITH-GIAN` rows are gated on Expo Agent documentation that was unavailable during this audit. They do not block Phase 0.2 start; they gate Phase 0.3 positioning decisions.
+No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is either a pure addition (not shipped by Anthropic) or a legitimate wrap with a documented wedge rationale. Both prior `RAISE-WITH-GIAN` rows closed 2026-05-18 as `WRAP-OK` after a second-pass evidence sweep on `agent.expo.dev` + the `expo/skills` repo (Section 1 above).
 
 ### CONFIRM items that must close before Phase 0.2 Day 2 dispatch
 
@@ -186,11 +214,6 @@ No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is eith
 **CONFIRM-002 (Critical).** `tool-output-fencing` skill is listed as a mitigation for indirect prompt injection (PREMORTEM rank-2) but its activation on template ingestion paths is unverified. Before Phase 0.2 Day 2 ships any skill that reads external content (template READMEs, docs, course transcripts), a security-engineer pass must verify `tool-output-fencing` is active on those code paths. Assign to security-engineer (this agent, Phase 0.2 Day 2 review pass).
 
 **CONFIRM-003 (High).** `EXPO_SDK_PIN="latest"` in both `install.sh` (line 13) and `install.ps1` (line 12) is a placeholder. A real semver pin must replace it before Phase 0.2 Day 2 or the installer provides no protection against SDK drift. Assign to infra-engineer.
-
-### RAISE-WITH-GIAN items (do not block Phase 0.2, gate Phase 0.3)
-
-- Expo Agent template selection capability: if docs.expo.dev confirms Expo Agent ships domain-vertical starters, re-evaluate whether the kit's 3 templates remain a wedge or become a DUPLICATE-DEPRECATE. Re-fetch docs.expo.dev in a session where that domain is allowlisted.
-- Expo Agent non-technical onboarding: same condition. If Expo Agent ships a wizard for non-technical users, the kit's core positioning argument requires a Harvey call before Phase 0.3 placement in Skool / workshop.
 
 ---
 
@@ -201,14 +224,14 @@ No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is eith
 | CONFIRM-001 | Write and test `tools/anthropic-drift-check.sh` per Section 5 spec | infra-engineer | Phase 0.2 Day 2 |
 | CONFIRM-002 | Verify `tool-output-fencing` is active on all external-content ingestion paths in Phase 0.2 skills | security-engineer | Phase 0.2 Day 2 |
 | CONFIRM-003 | Replace `EXPO_SDK_PIN="latest"` with a verified semver in `install.sh` and `install.ps1` | infra-engineer | Phase 0.2 Day 2 |
-| RAISE-001 | Fetch docs.expo.dev/guides/expo-agent (or equivalent) and re-run overlap check on template + onboarding rows | selrai-core | Phase 0.3 positioning |
-| RAISE-002 | Harvey sign-off if Expo Agent ships domain starters that match pt-companion, service-quote, or creator-companion | Harvey | Phase 0.3 positioning |
+
+Prior `RAISE-001` and `RAISE-002` closed 2026-05-18 as `WRAP-OK` via second-pass evidence on `agent.expo.dev` and `github.com/expo/skills`.
 
 ---
 
 ## Coverage Statement
 
-**Reviewed:**
+**Reviewed (first pass, security-engineer):**
 - `D:\FOLDERMAIN%\selrai-mobile-kit\README.md`
 - `D:\FOLDERMAIN%\selrai-mobile-kit\docs\prior-art.md`
 - `D:\FOLDERMAIN%\selrai-mobile-kit\install.sh`
@@ -220,9 +243,14 @@ No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is eith
 - https://code.claude.com/docs/en/whats-new/2026-w16 (Week 16 detail, mobile push notifications)
 - https://code.claude.com/docs/en/plugins (plugin architecture, monitors, settings, egress controls)
 
-**Not reviewed (blind spots):**
-- `docs.expo.dev` - fetch was permission-denied during this audit. Expo Agent capabilities are `[CONFIRM]` throughout.
-- `expo.dev/blog` - fetch was permission-denied. April 2026 Expo Agent announcement not directly verified.
-- The 3 template source directories (`pt-companion/`, `service-quote/`, `creator-companion/`) - these are Phase 0.2 deliverables and do not exist yet. Injection surfaces within those templates are not audited. Phase 0.2 Day 2 security pass covers them.
-- Phase 0.2 skill bodies - all 4 skills are stubs. Full injection-surface audit depends on Phase 0.2 implementations.
-- Nick Sarev course transcript - not fetched per Gian's confirmed decision 2026-05-18.
+**Reviewed (second pass, 2026-05-18, closes RAISE rows):**
+- `https://agent.expo.dev/` (developer-targeted marketing landing, no kit-overlap claims)
+- `https://docs.expo.dev/agent/` (returns 404, no docs section exists)
+- `https://expo.dev/agent` (307 redirect to `agent.expo.dev`)
+- `github.com/expo/skills/plugins/expo/skills/` (14 skills enumerated, see Section 1.5)
+- WebSearch "Expo Agent April 2026 features non-technical onboarding templates wizard launch" (no relevant primary or secondary hits)
+
+**Not reviewed (remaining blind spots):**
+- The 3 template source directories (`pt-companion/`, `service-quote/`, `creator-companion/`). These are Phase 0.2 deliverables and do not exist yet. Injection surfaces within those templates are not audited. Phase 0.2 Day 2 security pass covers them.
+- Phase 0.2 skill bodies. All 4 skills are stubs. Full injection-surface audit depends on Phase 0.2 implementations.
+- Nick Sarev course transcript. Not fetched per Gian's confirmed decision 2026-05-18.
