@@ -1,0 +1,49 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Bun
+.bun-cache/
+bun.lockb.bak
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+dist/
+
+# React Native
+*.jsbundle
+android/.gradle/
+android/app/build/
+android/build/
+ios/build/
+ios/Pods/
+ios/DerivedData/
+
+# Local installer state (kit writes these into ~/.claude, not into the repo)
+.claude/
+
+# Local secrets and env (kit must never read or commit these)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Editor and OS junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Test / smoke artifacts
+test-output/
+smoke-tmp/
+*.log
