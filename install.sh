@@ -5,12 +5,16 @@
 set -euo pipefail
 
 KIT_NAME="selrai-mobile-kit"
-KIT_VERSION="0.1.0-phase-0.1"
+KIT_VERSION="0.2.0-phase-0.2"
 REPO_URL="https://github.com/selrai-company/selrai-mobile-kit"
 
 # Hard-pinned Expo SDK. Per Gian's confirmed decision 2026-05-18.
-# Update only when Phase 0.2+ smoke tests pass on new SDK.
-EXPO_SDK_PIN="latest"  # TODO Phase 0.2: replace with verified SDK version
+# Pinned to 55.0.24: latest stable on npm registry as of 2026-05-18.
+# Source: registry.npmjs.org/expo (dist-tag latest -> 55.0.24, sdk-55 -> 55.0.24).
+# Canonical SDK 55 template deps (expo-template-blank-typescript@sdk-55):
+#   expo ~55.0.24, react 19.2.0, react-native 0.83.6, expo-status-bar ~55.0.6.
+# Update only when Phase 0.3+ smoke tests pass on a new SDK.
+EXPO_SDK_PIN="55.0.24"
 
 CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 SKILLS_DIR="${CLAUDE_DIR}/skills"
@@ -19,7 +23,7 @@ SETTINGS_FILE="${CLAUDE_DIR}/settings.json"
 log() { printf "[selrai-mobile-kit] %s\n" "$*"; }
 fail() { printf "[selrai-mobile-kit] ERROR: %s\n" "$*" >&2; exit 1; }
 
-log "Phase 0.1 install. v${KIT_VERSION}."
+log "Phase 0.2 install. v${KIT_VERSION}."
 
 # --- 1. Readiness check (Phase 0.2 expands into a Claude Code skill) ---
 
@@ -35,10 +39,12 @@ log "Tooling check passed (node $(node -v), bun $(bun -v))."
 
 # --- 2. Anthropic-drift check (per-install, PREMORTEM #1 mitigation) ---
 
-# TODO Phase 0.2 Day 2: replace with real diff check against claude.com/plugins/expo manifest.
-# For Phase 0.1 we record the kit version and the date so a future drift check has a baseline.
 mkdir -p "${CLAUDE_DIR}/selrai-mobile-kit"
-cat > "${CLAUDE_DIR}/selrai-mobile-kit/install-manifest.json" <<EOF
+MANIFEST_FILE="${CLAUDE_DIR}/selrai-mobile-kit/install-manifest.json"
+
+# Write / refresh the manifest baseline. jq merge preserves existing drift-check fields.
+if [ ! -f "${MANIFEST_FILE}" ]; then
+  cat > "${MANIFEST_FILE}" <<EOF
 {
   "kit": "${KIT_NAME}",
   "kit_version": "${KIT_VERSION}",
@@ -48,28 +54,49 @@ cat > "${CLAUDE_DIR}/selrai-mobile-kit/install-manifest.json" <<EOF
   "drift_check_cadence": "per-install"
 }
 EOF
-log "Install manifest written to ${CLAUDE_DIR}/selrai-mobile-kit/install-manifest.json."
+else
+  TMP_MANIFEST="$(mktemp)"
+  jq --arg v "${KIT_VERSION}" --arg p "${EXPO_SDK_PIN}" --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '.kit_version = $v | .expo_sdk_pin = $p | .installed_at = $ts' \
+    "${MANIFEST_FILE}" > "${TMP_MANIFEST}" && mv "${TMP_MANIFEST}" "${MANIFEST_FILE}" \
+  || log "Manifest refresh failed. Using existing manifest."
+fi
+log "Install manifest at ${MANIFEST_FILE}."
 
-# --- 3. Skill stubs (Phase 0.2 fills in real skill prompts) ---
+# Run drift check. Exit code 2 = drift detected (warning-only, never aborts install).
+DRIFT_CHECK_SCRIPT="$(dirname "$0")/tools/anthropic-drift-check.sh"
+if [ -f "${DRIFT_CHECK_SCRIPT}" ]; then
+  bash "${DRIFT_CHECK_SCRIPT}" || {
+    DRIFT_EXIT=$?
+    if [ "${DRIFT_EXIT}" -eq 2 ]; then
+      log "Drift warning noted. Continuing install."
+    else
+      log "Drift check returned unexpected exit code ${DRIFT_EXIT}. Continuing install."
+    fi
+  }
+else
+  log "Drift check script not found at ${DRIFT_CHECK_SCRIPT}. Skipping."
+fi
+
+# --- 3. Install skills (copy from kit repo, overwrite stubs) ---
 
 mkdir -p "${SKILLS_DIR}"
-for skill in mobile-readiness-check mobile-app-bootstrap mobile-template-pick mobile-phone-preview; do
-  if [ ! -f "${SKILLS_DIR}/${skill}.md" ]; then
-    cat > "${SKILLS_DIR}/${skill}.md" <<EOF
----
-name: ${skill}
-description: "selrai-mobile-kit Phase 0.1 skill stub. Phase 0.2 fills in real prompt."
----
+KIT_SKILLS_DIR="$(dirname "$0")/skills"
 
-# ${skill}
+if [ -d "${KIT_SKILLS_DIR}" ]; then
+  cp -r "${KIT_SKILLS_DIR}"/. "${SKILLS_DIR}/"
+  log "Skills copied from ${KIT_SKILLS_DIR} to ${SKILLS_DIR}."
+else
+  log "Kit skills directory not found at ${KIT_SKILLS_DIR}. Skills not installed."
+fi
 
-Phase 0.1 stub. Phase 0.2 replaces this file with the real skill prompt.
-EOF
-    log "Wrote skill stub: ${skill}.md"
-  else
-    log "Skill exists, skipped: ${skill}.md"
-  fi
-done
+# Soft-warn if tool-output-fencing skill is absent (security mitigation for CONFIRM-002).
+if [ ! -f "${SKILLS_DIR}/tool-output-fencing.md" ]; then
+  log "NOTE: tool-output-fencing skill not found at ${SKILLS_DIR}/tool-output-fencing.md."
+  log "      This skill guards against indirect prompt injection on template ingestion paths."
+  log "      Install it from the selrai-internal-kit or claude-workshop-kit before scaffolding."
+  log "      Install is not blocked. This is a security hardening recommendation."
+fi
 
 # --- 4. settings.json jq-merge (idempotent, additive) ---
 
@@ -100,14 +127,13 @@ log "Merged selrai_mobile_kit block into ${SETTINGS_FILE}."
 
 cat <<EOF
 
-[selrai-mobile-kit] Phase 0.1 install complete.
+[selrai-mobile-kit] Phase 0.2 install complete.
 
 Next:
   1. Open Claude Code in any project directory.
-  2. Run: /mobile-readiness-check
+  2. Paste the contents of SETUP-PROMPT.md into Claude Code.
   3. The kit walks you the rest of the way.
 
-Phase 0.2 is in flight (template + skill bodies land over the next 2 days).
 Track: ${REPO_URL}
 
 EOF
