@@ -16,6 +16,4 @@ Then scan the QR code with Expo Go on your phone. See `/mobile-phone-preview` if
 
 ## Stack
 
-Expo SDK 54 + React Native + Expo Router + NativeWind. Bun as the package manager.
-
-<!-- TODO Phase 0.3: align EXPO_SDK_PIN with install.sh EXPO_SDK_PIN once infra-engineer merges the verified semver. Currently pinned to ~54.0.0 as placeholder. -->
+Expo SDK 55 (pinned to 55.0.24) + React Native 0.83.6 + React 19.2 + Expo Router 55.0.x + NativeWind 4.2.x. Bun as the package manager.

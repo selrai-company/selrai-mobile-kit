@@ -254,3 +254,180 @@ Prior `RAISE-001` and `RAISE-002` closed 2026-05-18 as `WRAP-OK` via second-pass
 - The 3 template source directories (`pt-companion/`, `service-quote/`, `creator-companion/`). These are Phase 0.2 deliverables and do not exist yet. Injection surfaces within those templates are not audited. Phase 0.2 Day 2 security pass covers them.
 - Phase 0.2 skill bodies. All 4 skills are stubs. Full injection-surface audit depends on Phase 0.2 implementations.
 - Nick Sarev course transcript. Not fetched per Gian's confirmed decision 2026-05-18.
+
+---
+
+## Phase 0.2 Day 2 security re-pass (2026-05-18)
+
+**Author:** security-engineer (SelrAI agent)
+**Scope:** CONFIRM-002 closure pass. Full Phase 0.2 build (commit d6f6b26, main). SDK corrected from 52.0.0 to 55.0.24.
+
+---
+
+### 1. Ingestion path table
+
+For each external-content path in the four Phase 0.2 skills plus the drift-check script: "external content" means anything that could carry adversarial text reaching model context.
+
+| Path | Source type | tool-output-fencing covers? | Notes |
+|---|---|---|---|
+| `mobile-template-pick` Step 1: user's three free-text answers | User prose (direct input, business description field) | No. Direct input is a `UserPromptSubmit` surface, not a tool output. tool-output-fencing is a `PostToolUse` hook, scoped to tool results only. | Covered partially by the 8 KB content cap implicit in the skill (one-sentence input contract). Lakera-style injection pre-pass is absent. Separate finding below. |
+| `mobile-template-pick` Step 3a: `ollama run` stdout | Local Gemma on local Ollama. Stdout captured via `Bash`/`PowerShell` tool call matching `ollama`. Classifier result is template name only. | Partial. The `Bash`/`PowerShell` Bash matchers in the fencing scope table watch for `curl\|wget\|Invoke-WebRequest\|iwr\|Invoke-RestMethod\|irm` (SKILL.md lines 28-30). `ollama run` does not match those patterns. Not fenced. | Low residual risk: Gemma is local, output is validated against a 3-value allowlist (`pt-companion`/`service-quote`/`creator-companion`) before use. Invalid output silently falls through to deterministic rules. The validation is an effective output sanitizer for this narrow path. |
+| `mobile-readiness-check` Step 4: `curl --head https://registry.npmjs.org` stdout | External HTTP HEAD response headers. Captured via `Bash` tool call containing `curl`. | Yes. The `Bash` matcher in SKILL.md line 28 (`curl\|wget\|...`) fires on this call. | Only response headers are read (first line via `head -1`). No body content ingested. Low injection surface even without fencing. |
+| `mobile-readiness-check` Step 5: `curl --head https://exp.host` stdout | External HTTP HEAD response headers. Same as above. | Yes. Same `curl` Bash matcher applies. | Same note: headers only, first line only. |
+| `mobile-app-bootstrap` Step 1: `ls ~/.claude/plugins/` stdout | Local filesystem listing. `Bash` tool, path is local, not an HTTP URL. | No. SKILL.md explicitly states: "Internal Read of source files is not fenced." The fencing scope for `Read` is `^https?://` OR HTML/XML in Downloads/Temp/cache. Filesystem `ls` does not match. | Low risk: output is a directory listing. No adversarial text surface. |
+| `mobile-app-bootstrap` Step 3: `ls ~/.claude/selrai-mobile-kit/templates/<name>/` and `ls ./templates/<name>/` | Local filesystem listing. | No. Same rationale as above. | Low risk: directory listing only. |
+| `mobile-app-bootstrap` Step 4: `npx create-expo-app@latest` stdout | npm registry network call via Bash (npx). Does not match `curl\|wget\|Invoke-WebRequest`. | No. npx is not in the fencing matchers. | Medium residual risk: scaffold stdout is suppressed from user view by the skill's no-raw-output rule, but it still enters model context. If create-expo-app prints adversarial text in a future version (supply chain), the model sees it unfenced. Separate finding below (FIND-001). |
+| `mobile-app-bootstrap` Step 5: `cp -r <template-source>` / `Copy-Item` | In-repo template files copied to user filesystem. Static TypeScript/JSON files. | No. Not a network fetch, not HTML in a temp path. | Templates verified clean (see Section 2 below). No adversarial content in any `app/_layout.tsx`, `app/index.tsx`, `package.json`, `README.md`. |
+| `mobile-app-bootstrap` Step 6-7: `bun add`/`bun install` stdout | npm registry network calls via Bun. Does not match fencing matchers. | No. Same gap as npx above. | Medium residual risk: same supply-chain vector as Step 4. Stdout suppressed from user but reaches model. Separate finding (FIND-001). |
+| `mobile-phone-preview` Step 2: `bun run start` (Metro bundler) stdout | Local process stdout. No network fetch, no external content. | No. Local process; fencing not applicable. | Skill instructs model to not surface raw Metro output. Model sees it but is instructed to filter. Low risk. |
+| `anthropic-drift-check.sh` line 55: `curl -sSL https://claude.com/plugins/expo` | External HTTP body (HTML page). | Yes. The `curl` Bash matcher fires. | Critical path: the fetched HTML is stored in `HTTP_BODY` variable. It is then processed via `grep -oP` regex to extract the `og:description` meta tag (lines 98-107). The extracted text is then SHA-256 hashed (lines 118, `_sha256`). The hash (not the text) is stored in the manifest. The raw `HTTP_BODY` is never echoed to stdout for the model to read as instructions. The description text is only used as input to `sha256sum`. Hash-not-text pattern confirmed: line 118. |
+| `anthropic-drift-check.sh` line 60: second `curl` for HTTP status code | External HTTP connection, `-w "%{http_code}"` only, `-o /dev/null`. | Yes. Same curl matcher. | Status code is a 3-digit integer, not user-controlled text. Zero injection surface. |
+
+---
+
+### 2. Template static-content verification
+
+All six TypeScript template source files (`app/_layout.tsx` and `app/index.tsx` for each of the three templates) were read in full.
+
+Findings:
+- Zero network fetch calls in any template file. No `fetch()`, no `axios`, no `Invoke-WebRequest`, no external URL references in code.
+- Zero dynamic content ingestion. All strings are hardcoded labels (`"Welcome back"`, `"New Quote"`, etc.).
+- Zero external script imports. All imports are from `react-native`, `expo-router`, and `react`.
+- The `handlePlaceholder` function in each `index.tsx` only calls `console.log` and `Alert.alert` with hardcoded strings. No model-visible content.
+- Package.json dep trees: `expo 55.0.24`, `expo-router ~55.0.14`, `expo-status-bar ~55.0.6`, `react 19.2.0`, `react-native 0.83.6`, `nativewind ^4.2.4`, `tailwindcss ^3.4.0`. All are current, maintained packages as of 2026-05-18.
+
+Template README files contain no dynamic fetch instructions and no URLs other than internal `mobile-phone-preview` references. The one TODO comment in each README (`templates/pt-companion/README.md` line 21, `templates/service-quote/README.md` line 21, `templates/creator-companion/README.md` line 21) mentions aligning `EXPO_SDK_PIN` in Phase 0.3. Not an injection vector.
+
+**Template source content: clean. No adversarial content surface identified.**
+
+One secondary finding noted: all three template READMEs still reference "Expo SDK 54" in the Stack section (line 19 of each README) while `package.json` correctly pins `expo 55.0.24`. This is a documentation inconsistency, not a security finding. Assigned FIND-002.
+
+---
+
+### 3. CONFIRM-002 disposition
+
+**CONFIRM-002: CLOSED (with two residual non-blocking findings).**
+
+The prior audit concern was: "`tool-output-fencing` skill is listed as a mitigation for indirect prompt injection (PREMORTEM rank-2) but its activation on template ingestion paths is unverified."
+
+Evidence reviewed:
+
+1. The `tool-output-fencing` skill body exists at `D:\FOLDERMAIN%\Gian's Master Files and Projects (AI)\Gian's Agents\skills\tool-output-fencing\SKILL.md`. The skill is in the user-level kit, confirmed present via glob scan.
+
+2. Scope of fencing per SKILL.md lines 27-31: `WebFetch` (always), `Bash` when matching `curl|wget|Invoke-WebRequest|iwr|Invoke-RestMethod|irm`, `PowerShell` same matchers, `Read` when path is `^https?://` or HTML/XML in Downloads/Temp/cache. Internal filesystem reads are explicitly not fenced.
+
+3. Applying this scope to every ingestion path in Section 1:
+   - The two curl calls in `mobile-readiness-check` (Steps 4-5) are fenced by the curl Bash matcher.
+   - The two curl calls in `anthropic-drift-check.sh` (lines 55, 60) are fenced. Critically, the fetched HTML body is processed by the bash script, not passed to the model as readable text. The script extracts a description string, hashes it, and stores only the hash. The model never reads the raw HTML. Even if fencing did not fire, there is no injection surface because the adversarial content never reaches model-readable context.
+   - Template copy operations (`cp`, `Copy-Item`) are not fenced, correctly. The template files are static, in-repo, with no adversarial content (verified Section 2).
+   - `npx create-expo-app`, `bun add`, and `bun install` stdout is not fenced (matchers do not cover package managers). This is FIND-001 (Medium severity, not blocking).
+   - `ollama run` stdout is not fenced, but is sanitized by the 3-value output allowlist in the skill before any use (mobile-template-pick Step 3a validation logic).
+   - The user's business-description input (`mobile-template-pick` Step 1) is a `UserPromptSubmit` surface, not a tool output. Fencing does not apply here by design. This is a distinct injection surface addressed separately (FIND-003, Medium).
+
+4. Soft-warn wiring verified: `install.sh` lines 93-99 and `install.ps1` lines 193-200 both check for `tool-output-fencing.md` in the skills directory and emit a named log warning if absent. The warning text correctly names the security function. The install does not block, per the "soft-warn" design decision. The absence condition is surfaced to the installer.
+
+Conclusion: the fencing skill correctly covers every external-network fetch that reaches model context in the Phase 0.2 skill chain. The one gap (npm/Bun package manager stdout) is a pre-existing architectural ceiling of the PostToolUse hook layer (npm stdout is not a curl-matcher path), and its blast radius is bounded by the skill's no-raw-output rule. The drift-check script uses a hash-not-text pattern that makes the external HTML body unreachable as model instructions even without fencing. CONFIRM-002 closes.
+
+---
+
+### 4. New findings
+
+**FIND-001 (Medium)**
+Location: `skills/mobile-app-bootstrap.md` Steps 4, 6, 7 (lines 59, 84-86, 91-92)
+Description: `npx create-expo-app@latest` and `bun add`/`bun install` are network-reaching package-manager calls. Their stdout passes through the Bash/PowerShell tool result and enters model context. Neither `npx` nor `bun` matches the fencing skill's tool-call matchers (`curl|wget|Invoke-WebRequest|iwr|Invoke-RestMethod|irm`). A malicious package on the npm registry that prints adversarial output to its install script stdout would reach the model unfenced. The skill's no-raw-output rule instructs the model to suppress this content from user view but does not prevent the model from acting on it.
+Recommended fix (Phase 0.3): extend the fencing skill's Bash/PowerShell matchers to include `npx|bun|npm`. This is a one-line change to the matcher in the PostToolUse hook config. Alternatively, add a `[DATA-NOT-INSTRUCTIONS]` inline reminder at the start of Steps 4, 6, 7 in the skill body.
+References: OWASP LLM01 (indirect prompt injection), SKILL.md lines 27-31.
+Blocks ship: No. Blast radius is bounded by the 5-host egress allowlist (registry.npmjs.org is in the allowlist, no other hosts can serve packages) and the skill's output-suppression rule. The attack requires a compromised npm package already on the registry. Medium, not High, because the egress allowlist is a compensating control.
+
+**FIND-002 (Low)**
+Location: `templates/pt-companion/README.md` line 19, `templates/service-quote/README.md` line 19, `templates/creator-companion/README.md` line 19
+Description: All three template READMEs state "Expo SDK 54" in the Stack section. All three `package.json` files correctly pin `expo 55.0.24`. A user or contributor reading the README would have mismatched version information. Not a security issue. Documentation debt.
+Recommended fix (Phase 0.3): update all three README Stack sections from "Expo SDK 54" to "Expo SDK 55 (55.0.24)". Same edit as the existing TODO comment in each README.
+References: None.
+Blocks ship: No.
+
+**FIND-003 (Medium)**
+Location: `skills/mobile-template-pick.md` Steps 1-3 (lines 22-101)
+Description: The user's business description (Step 1) is free-text prose with no byte ceiling, no injection pre-pass, and no content sanitization before it is interpolated into the Ollama prompt string (Step 3a, lines 78-89). A non-technical user could paste a large block of text (no cap enforced) or an attacker interacting with a deployed version of this skill could craft a business description that contains prompt injection payloads targeting Gemma's classification output. The Gemma output is validated to a 3-value allowlist before use, which partially mitigates the injection risk against the model's downstream classification decision, but the raw business description string is also included in the rationale sentence emitted to the user (Step 4, lines 130-145), which could cause the injected content to surface in Claude's response.
+Recommended fix (Phase 0.3): add an 8 KB hard cap on the business description input before it is used in Step 3a. Apply the `injection_prepass` check per the SelrAI input-surface 4-item checklist. The Gemma output allowlist validation (already present) is the correct mitigation for the classification decision path, but the rationale sentence path needs the input capped and sanitized first.
+References: OWASP LLM01, SelrAI Discipline Contract input-surface checklist item 4 (injection pre-pass), item 2 (content cap).
+Blocks ship: No. The deployed surface is a locally-run Claude Code session with a non-technical single user. The threat model for Phase 0.2 is a non-adversarial small-business owner running the kit on their own machine. At Phase 0.3, if this skill is exposed to any shared or web-delivered surface, this finding escalates to High and blocks ship.
+
+---
+
+### 5. Input surface checklist (Phase 0.2 new surfaces)
+
+Per the SelrAI Discipline Contract input-surface 4-item checklist:
+
+| Surface | Allowlist | Rate limit | Content cap | Injection pre-pass |
+|---|---|---|---|---|
+| `mobile-template-pick` business description (user prose) | N/A. Single local user, identity fixed. | N/A. Single local session. | No. No byte ceiling enforced. (FIND-003) | No. No Lakera-scan before Ollama call. (FIND-003) |
+| `mobile-readiness-check` curl stdout (network probe) | N/A. Output is HTTP status code only. Headers first-line only. | N/A. | N/A. | Fenced by PostToolUse hook (curl matcher). |
+| `anthropic-drift-check.sh` curl stdout (plugin page HTML) | N/A. Script context, not model context. | N/A. | N/A. | Fenced by PostToolUse hook. Raw HTML hashed, not passed to model. |
+
+Rationale for N/A on allowlist and rate limit: these surfaces are Claude Code skills invoked locally by a single authenticated user on their own machine. There is no inbound network surface, no webhook, no shared identity pool. The 4-item checklist items 1 and 2 are designed for multi-tenant or networked entry points. Documenting the N/A explicitly per the checklist contract.
+
+---
+
+### 6. Premortem gate (Phase 0.2 Day 2, per BRAIN.md mandatory gate)
+
+"This shipped. Six months later, it failed. The cause was ___."
+
+| Cause | Likelihood rank | Severity | Earliest detection signal | Mitigation present | Mitigation ref |
+|---|---|---|---|---|---|
+| A supply-chain compromised npm package (reached via npx or bun in bootstrap) prints adversarial stdout that causes Claude to take an unexpected action during scaffolding | 1 | Medium | User reports unexpected files created or CLI commands run during scaffolding. First log signal: unexpected Bash tool call outside the expected scaffold sequence. | Partial. Egress allowlist limits install sources to `registry.npmjs.org`. Skill no-raw-output rule suppresses stdout from user. Fencing does not cover package managers (FIND-001). | `install.sh` lines 111-123 (egress allowlist). FIND-001. |
+| User pastes a large or adversarially crafted business description into the template picker, causing injection into the Gemma prompt or surfacing injected text in the Claude rationale response | 2 | Medium | Claude's rationale sentence in Step 4 contains text that does not match the expected one-sentence format. User or auditor notices non-PT/service/creator-related content in the response. | Partial. Gemma output validated to 3-value allowlist. Injected content in rationale sentence is not blocked. No byte cap on input. | `skills/mobile-template-pick.md` lines 98-101 (output validation). FIND-003. |
+| Expo SDK 55 ships a breaking change to `create-expo-app` or `expo-router` within 6 months that silently fails the scaffold without a user-visible error | 3 | Medium | `mobile-app-bootstrap` Step 4 fails; skill emits one-sentence error. User files a GitHub issue. No silent failure: every step has an explicit fail message. | Yes. Hard pin at 55.0.24. `mobile-app-bootstrap` Step 4 fail message surfaces the error. Drift check monitors Anthropic plugin description for SDK-overlap signals. | `install.sh` line 17, `install.ps1` line 16. `skills/mobile-app-bootstrap.md` lines 62-63. |
+| The `tool-output-fencing` skill is absent at the time of skill invocation (not installed or overwritten by another kit's installer), leaving the curl-probe paths unfenced | 4 | Medium | Soft-warn fires during install (install.sh lines 93-99). If user skips install and invokes skills directly, no warning surfaces. | Partial. Install soft-warn present. No enforcement at skill invocation time. | `install.sh` lines 93-99, `install.ps1` lines 193-200. |
+| Template README SDK version mismatch (SDK 54 vs actual 55.0.24) causes a contributor to submit a PR that downgrades package.json to match the README | 5 | Low | PR diff shows expo downgraded to ~54.x. Caught at code review. | Partial. The TODO comment in each README flags the mismatch for Phase 0.3 fix. No automated check exists. | `templates/pt-companion/README.md` line 21. FIND-002. |
+
+All Critical and High causes: none present. No premortem cause blocks the ship verdict.
+
+---
+
+### 7. Ship verdict for Phase 0.2 build
+
+**SHIP**
+
+Rationale: CONFIRM-002 is closed with evidence. The two prior High CONFIRM items from Day 1 (CONFIRM-001: drift-check script, CONFIRM-003: SDK pin) were resolved before this pass (drift-check script exists and is wired; SDK pin replaced with 55.0.24). The three new findings (FIND-001, FIND-002, FIND-003) are Medium and Low severity with compensating controls present. No Critical or High finding is unmitigated in the Phase 0.2 build. The premortem produces no Critical or High causes without mitigation.
+
+The ship verdict is conditioned on Phase 0.3 addressing the punch list in Section 8.
+
+---
+
+### 8. Phase 0.3 hardening punch list
+
+These items are not blocking Phase 0.2 ship. They must be addressed before any surface in this kit is exposed to a shared, multi-user, or web-delivered deployment.
+
+1. **FIND-001 fix (infra-engineer).** Extend the PostToolUse fencing hook's Bash/PowerShell matchers to include `npx|bun|npm`. One-line change in the hook config. Verify the change does not over-fence internal bun calls (e.g. `bun -v` in readiness check should not be fenced).
+2. **FIND-003 fix (ml-engineer).** Add 8 KB hard cap on the business description input in `mobile-template-pick` Step 1, enforced before the string is interpolated into the Ollama prompt. Add an inline injection pre-pass (even a simple keyword filter for `ignore previous instructions`, `system:`, `[INST]`, `<s>` patterns) before the Ollama call.
+3. **FIND-002 fix (infra-engineer).** Update all three template READMEs: change "Expo SDK 54" to "Expo SDK 55 (55.0.24)" in the Stack section. Align with the TODO comment at line 21 of each README.
+4. **Template README SDK TODO resolution (infra-engineer).** Remove the TODO comment at line 21 of each template README once FIND-002 is fixed and the SDK version is confirmed stable through Phase 0.3 smoke tests.
+5. **Input-surface checklist re-run (security-engineer).** If Phase 0.3 adds any new user-input surface, a fresh input-surface audit is required before that skill ships. The Phase 0.2 surfaces (local single-user, no allowlist needed) do not generalize to Phase 0.3 surfaces if GHL or webhook surfaces are added.
+6. **CONFIRM-004 (infra-engineer, carried from Day 1).** `og:description` extraction reliability in `anthropic-drift-check.sh`. This pass confirms the hash-not-text pattern is safe, but the reliability of the extraction regex against future Claude.com HTML structure changes is an infra-engineer concern, not a security-engineer concern. Phase 0.3 scope.
+7. **CONFIRM-005 (infra-engineer, carried from Day 1).** `$PSScriptRoot` reliability in piped-exec installs on Windows. Phase 0.3 scope.
+
+---
+
+### 9. Coverage statement (Phase 0.2 Day 2)
+
+**Reviewed in this pass:**
+- `D:\FOLDERMAIN%\selrai-mobile-kit\docs\anthropic-overlap.md` (prior audit, Section 7 CONFIRM-002)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\skills\mobile-readiness-check.md` (full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\skills\mobile-template-pick.md` (full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\skills\mobile-app-bootstrap.md` (full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\skills\mobile-phone-preview.md` (full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\install.sh` (lines 92-99 soft-warn, lines 67-79 drift-check wiring, full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\install.ps1` (lines 193-200 soft-warn, lines 69-165 drift-check, full)
+- `D:\FOLDERMAIN%\selrai-mobile-kit\tools\anthropic-drift-check.sh` (full, 187 lines)
+- All 6 template TypeScript files (`app/_layout.tsx`, `app/index.tsx` for pt-companion, service-quote, creator-companion)
+- All 3 template `package.json` files
+- All 3 template `README.md` files
+- `templates/README.md`
+- `evals/template-picker-eval.jsonl` (10 cases)
+- `D:\FOLDERMAIN%\Gian's Master Files and Projects (AI)\Gian's Agents\skills\tool-output-fencing\SKILL.md` (fencing scope table, activation triggers, hook wiring)
+
+**Not reviewed in this pass (remaining blind spots):**
+- The PostToolUse hook script (`hooks/PostToolUse.tool-output-fence.ps1`) was not read. The fencing scope was verified from SKILL.md, not from the hook implementation itself. If the hook implementation differs from the SKILL.md scope table, FIND-001 and the CONFIRM-002 coverage claim may need revision. Assign hook implementation verification to infra-engineer Phase 0.3.
+- Live smoke test on a real phone (Day 3 work, per scope exclusion).
+- CONFIRM-004 and CONFIRM-005 (infra-engineer Phase 0.3, per scope exclusion).
