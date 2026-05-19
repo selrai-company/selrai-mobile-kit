@@ -28,6 +28,33 @@ function Fail   { param($Msg) Write-Host "[selrai-mobile-kit] ERROR: $Msg" -Fore
 
 Log "Phase 0.2 install. v$KitVersion."
 
+# --- 0. Detect piped-exec mode (run via iwr ... | iex) ---
+# In direct invocation, $PSScriptRoot is the script's directory. When the
+# installer is piped through iex (e.g. `iwr https://.../install.ps1 | iex`),
+# $PSScriptRoot is $null and the kit's skills/ and tools/ are not on disk.
+# Detect by missing adjacent skills/ dir; if missing, clone the repo to a
+# temp dir and proceed from there. Closes CONFIRM-005.
+
+$ScriptDir = $PSScriptRoot
+$TempClone = $null
+
+# Piped-exec if no $PSScriptRoot OR the dir is missing kit layout.
+# Require BOTH skills/ AND tools/ to consider it a real kit checkout.
+if (-not $ScriptDir -or -not (Test-Path (Join-Path $ScriptDir "skills")) -or -not (Test-Path (Join-Path $ScriptDir "tools"))) {
+  Log "Piped-exec mode detected (no kit dir adjacent to script). Cloning kit to temp..."
+  if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    Fail "git not found. Required for piped install. Install Git for Windows from https://git-scm.com then re-run."
+  }
+  $TempClone = Join-Path $env:TEMP ("selrai-mobile-kit-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
+  $cloneOutput = & git clone --depth 1 $RepoUrl $TempClone 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    if (Test-Path $TempClone) { Remove-Item -Recurse -Force $TempClone -ErrorAction SilentlyContinue }
+    Fail "git clone of $RepoUrl failed. Check network access to github.com."
+  }
+  $ScriptDir = $TempClone
+  Log "Kit cloned to $TempClone. Will clean up on exit."
+}
+
 # --- 1. Readiness check (Phase 0.2 expands into a Claude Code skill) ---
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail "Node.js not found. Install Node 20+ from https://nodejs.org and re-run." }
@@ -195,7 +222,7 @@ if ($CurrentHash) {
 
 if (-not (Test-Path $SkillsDir)) { New-Item -ItemType Directory -Path $SkillsDir -Force | Out-Null }
 
-$KitSkillsDir = Join-Path $PSScriptRoot "skills"
+$KitSkillsDir = Join-Path $ScriptDir "skills"
 if (Test-Path $KitSkillsDir) {
   Copy-Item -Recurse -Force (Join-Path $KitSkillsDir "*") $SkillsDir
   Log "Skills copied from $KitSkillsDir to $SkillsDir."
@@ -237,6 +264,12 @@ $Settings["selrai_mobile_kit"] = [ordered]@{
 }
 $Settings | ConvertTo-Json -Depth 10 | Out-File -FilePath $SettingsFile -Encoding utf8
 Log "Merged selrai_mobile_kit block into $SettingsFile."
+
+# --- Cleanup temp clone if piped-exec ---
+if ($TempClone -and (Test-Path $TempClone)) {
+  Remove-Item -Recurse -Force $TempClone -ErrorAction SilentlyContinue
+  Log "Cleaned up temp clone at $TempClone."
+}
 
 # --- 5. Next steps ---
 

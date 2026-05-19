@@ -29,6 +29,46 @@ fail() { printf "[selrai-mobile-kit] ERROR: %s\n" "$*" >&2; exit 1; }
 
 log "Phase 0.2 install. v${KIT_VERSION}."
 
+# --- 0. Detect piped-exec mode (run via curl ... | bash, process substitution, or stdin) ---
+# In direct invocation, $0 is the script path and dirname "$0" resolves to a
+# directory with the kit's skills/ and tools/ adjacent. When the installer is
+# piped (e.g. `bash <(curl -sSL .../install.sh)` or `curl -sSL .../install.sh
+# | bash`), $0 is empty / "bash" / "/dev/fd/N" and those adjacent dirs do not
+# exist on the local filesystem. Closes CONFIRM-005.
+
+# Resolve script directory only if $0 (or BASH_SOURCE[0]) is a real file.
+# When piped (cat | bash, curl | bash, bash <(...)), $0 is "bash" / "" /
+# /dev/fd/N and "-f $0" returns false. Falling back to dirname on a non-path
+# string returns "." which silently resolves to cwd, masking piped mode.
+SCRIPT_DIR=""
+SCRIPT_SOURCE=""
+if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
+  SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+elif [ -n "$0" ] && [ -f "$0" ]; then
+  SCRIPT_SOURCE="$0"
+fi
+if [ -n "${SCRIPT_SOURCE}" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "${SCRIPT_SOURCE}")" 2>/dev/null && pwd 2>/dev/null || echo "")"
+fi
+
+TEMP_CLONE=""
+
+# Piped-exec if no resolvable script dir OR the dir is missing kit layout.
+# Require BOTH skills/ AND tools/ to consider it a real kit checkout (reduces
+# false-negative if cwd happens to contain a skills/ dir by coincidence).
+if [ -z "${SCRIPT_DIR}" ] || [ ! -d "${SCRIPT_DIR}/skills" ] || [ ! -d "${SCRIPT_DIR}/tools" ]; then
+  log "Piped-exec mode detected (no kit dir adjacent to script). Cloning kit to temp..."
+  command -v git >/dev/null 2>&1 || fail "git not found. Required for piped install. Install git from https://git-scm.com then re-run."
+  TEMP_CLONE="$(mktemp -d 2>/dev/null || mktemp -d -t selrai-mobile-kit)"
+  if ! git clone --depth 1 "${REPO_URL}.git" "${TEMP_CLONE}" 2>&1 | tail -3; then
+    rm -rf "${TEMP_CLONE}"
+    fail "git clone of ${REPO_URL} failed. Check network access to github.com."
+  fi
+  SCRIPT_DIR="${TEMP_CLONE}"
+  trap 'if [ -n "${TEMP_CLONE}" ] && [ -d "${TEMP_CLONE}" ]; then rm -rf "${TEMP_CLONE}"; fi' EXIT
+  log "Kit cloned to ${TEMP_CLONE}. Will clean up on exit."
+fi
+
 # --- 1. Readiness check (Phase 0.2 expands into a Claude Code skill) ---
 
 command -v node >/dev/null 2>&1 || fail "Node.js not found. Install Node 20+ from https://nodejs.org and re-run."
@@ -68,7 +108,7 @@ fi
 log "Install manifest at ${MANIFEST_FILE}."
 
 # Run drift check. Exit code 2 = drift detected (warning-only, never aborts install).
-DRIFT_CHECK_SCRIPT="$(dirname "$0")/tools/anthropic-drift-check.sh"
+DRIFT_CHECK_SCRIPT="${SCRIPT_DIR}/tools/anthropic-drift-check.sh"
 if [ -f "${DRIFT_CHECK_SCRIPT}" ]; then
   bash "${DRIFT_CHECK_SCRIPT}" || {
     DRIFT_EXIT=$?
@@ -85,7 +125,7 @@ fi
 # --- 3. Install skills (copy from kit repo, overwrite stubs) ---
 
 mkdir -p "${SKILLS_DIR}"
-KIT_SKILLS_DIR="$(dirname "$0")/skills"
+KIT_SKILLS_DIR="${SCRIPT_DIR}/skills"
 
 if [ -d "${KIT_SKILLS_DIR}" ]; then
   cp -r "${KIT_SKILLS_DIR}"/. "${SKILLS_DIR}/"

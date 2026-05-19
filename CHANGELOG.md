@@ -5,6 +5,24 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.2] - 2026-05-18
+
+Closes the piped-exec install path (CONFIRM-005) and brings every template to real-phone-verified status.
+
+### Fixed
+
+- **CONFIRM-005: piped-exec install path.** The `curl ... | bash` and `iwr ... | iex` distribution paths (the standard "one-liner install" pattern) previously silently no-op'd the skill copy because `$0` / `$PSScriptRoot` does not resolve to a real script path under those modes. Both `install.sh` and `install.ps1` now detect this (script source is not a regular file OR adjacent `skills/` + `tools/` dirs missing), `git clone` the repo to a temp dir, proceed normally against the cloned source, and clean up the temp dir on EXIT.
+- `install.sh` detection hardened: uses `BASH_SOURCE[0]` first, then `-f "$0"`. Avoids the false-negative where `dirname "bash"` resolves to `.` and the caller's cwd happens to have a `skills/` dir by coincidence. Both `skills/` AND `tools/` must exist adjacent to consider the dir a real kit checkout.
+- New `tests/piped_exec_smoke.sh` (13 assertions): runs `install.sh` through stdin from a clean cwd (simulates `curl ... | bash` from `$HOME`), verifies piped-exec detection fires, git clone completes, drift-check runs from the cloned dir, all 4 skills install, settings.json gets the kit block, second invocation is idempotent. Result: 13/13 PASS locally.
+
+### Verified
+
+- Real-phone smoke on **all 3 templates**: `pt-companion`, `service-quote`, `creator-companion`. Expo Go 54.0.8 on Gian's phone, each template bundled cleanly via Metro on LAN, home screen rendered with NativeWind-styled buttons, both placeholder alerts fired correctly. No errors. Closes the gap v0.1.1 left for `service-quote` + `creator-companion`.
+
+### Remaining gap (one, deferred to Phase 0.3)
+
+- **macOS install path.** Both installers have only run on Win11 (Git Bash for `install.sh`, pwsh for `install.ps1`) to date. macOS would test the BSD `sed -E`, BSD `jq`, and BSD `mktemp` paths which differ subtly from the GNU equivalents `install.sh` was authored against. Phase 0.3 gate: smoke when Mac access is available. Workshop attendees on Mac are advised to wait for v0.1.3.
+
 ## [0.1.1] - 2026-05-18
 
 Hot follow-up to 0.1.0. **0.1.0 was DOA on real phones** and is superseded.
