@@ -5,6 +5,25 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.3] - 2026-05-19
+
+Closes the parity gap with the 4 hardening-lap kits: every distributable kit now has a clean uninstall path. Also closes FIND-003 from the Day 2 security re-pass.
+
+### Added
+
+- `uninstall.sh` + `uninstall.ps1`: idempotent teardown. Removes the 4 mobile-* skill files from `~/.claude/skills/`, the `~/.claude/selrai-mobile-kit/` state directory (install manifest + drift state), and the `selrai_mobile_kit` top-level key from `~/.claude/settings.json` via `jq del`. Other user keys preserved. `--yes` flag for non-interactive use, `--dry-run` for audit.
+- `tests/uninstall_smoke.sh`: 6-phase smoke (install, present-assertion, uninstall, removed-assertion, settings.json integrity with sentinel-key preservation check, idempotency). Result on Win11 Git Bash + Bun 1.3.14: **20/20 PASS**.
+- README "Uninstall" section pointing to both scripts.
+
+### Fixed
+
+- **FIND-003 (Medium): template-picker input sanity gate.** `skills/mobile-template-pick.md` Step 1.5 adds an 8 KB byte cap on the business description plus a 13-pattern injection pre-pass (matches `ignore previous instructions`, `system:`, `[INST]`, `<s>`, `<|im_start|>`, `dan mode`, `reveal the system prompt`, etc.). On violation: refuse, prompt the user to rephrase. Sister-list note ties the patterns to `wiki-brain-kit/compactor/sanitise.py` and `sub-agent-discipline-kit/skills/goal-loop-wrapper/goal-loop.sh` lineage.
+
+### Phase 0.3 deferrals (documented for posterity)
+
+- **macOS install path** (unchanged from v0.1.2 CHANGELOG). Both installers only verified on Win11. Workshop attendees on Mac should wait for v0.1.4.
+- **FIND-001** (npx / bun / npm stdout fencing). Lives at the user-kit-level `tool-output-fencing` hook config, not in this repo. Out of scope; tracked at the operator's user-kit layer.
+
 ## [0.1.2] - 2026-05-18
 
 Closes the piped-exec install path (CONFIRM-005) and brings every template to real-phone-verified status.

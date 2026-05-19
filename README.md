@@ -34,6 +34,26 @@ iwr -useb https://raw.githubusercontent.com/selrai-company/selrai-mobile-kit/mai
 
 After install, open Claude Code and run `/mobile-readiness-check`. The kit walks you the rest of the way.
 
+## Uninstall
+
+Clean teardown is idempotent. Removes only what the installer created (4 skill files, kit state dir, `selrai_mobile_kit` key in `settings.json`). Other user keys, other skills, and scaffolded projects on your filesystem are untouched.
+
+```bash
+# macOS / Linux
+bash uninstall.sh           # interactive
+bash uninstall.sh --yes     # non-interactive
+bash uninstall.sh --dry-run # audit only, no changes
+```
+
+```powershell
+# Windows
+powershell -ExecutionPolicy Bypass -File uninstall.ps1
+powershell -ExecutionPolicy Bypass -File uninstall.ps1 -Yes
+powershell -ExecutionPolicy Bypass -File uninstall.ps1 -DryRun
+```
+
+Smoke-tested at `tests/uninstall_smoke.sh` (20/20 assertions PASS on Win11 + Bun 1.3.14, including sentinel-key preservation in `settings.json`).
+
 ## Status
 
 **Phase 0.1 ship-locked 2026-05-18.** Design + scaffold + prior-art doc landed.
