@@ -91,21 +91,28 @@ if [ "${HTTP_STATUS}" != "200" ] && [ "${HTTP_STATUS}" != "301" ] && [ "${HTTP_S
 fi
 
 # ---- extract description block ----
-# Strategy: pull the meta description tag, then the first <p> block in the main content area.
-# Normalize whitespace for stable hashing.
+# Strategy: find the meta tag containing og:description (any attribute order),
+# then extract its content attribute. The Anthropic plugin page renders with
+# `content="..." property="og:description"` (content first), so a single
+# anchored lookbehind misses it. Two-pass: tag, then content.
 
-# Try og:description meta tag first (most stable cross-render)
-DESC_RAW="$(printf '%s' "${HTTP_BODY}" | grep -oP '(?<=<meta[^>]*property="og:description"[^>]*content=")[^"]*' 2>/dev/null || true)"
-
-# Fallback: meta name="description"
-if [ -z "${DESC_RAW}" ]; then
-  DESC_RAW="$(printf '%s' "${HTTP_BODY}" | grep -oP '(?<=<meta[^>]*name="description"[^>]*content=")[^"]*' 2>/dev/null || true)"
+# Try og:description meta tag (order-agnostic within the tag)
+META_TAG="$(printf '%s' "${HTTP_BODY}" | grep -oP '<meta[^>]*\bproperty="og:description"[^>]*>' 2>/dev/null | head -1 || true)"
+if [ -n "${META_TAG}" ]; then
+  DESC_RAW="$(printf '%s' "${META_TAG}" | grep -oP '(?<=\bcontent=")[^"]*' 2>/dev/null | head -1 || true)"
 fi
 
-# Fallback: grab visible text between <p> tags in the first 8KB of body
+# Fallback: meta name="description" (same two-pass)
 if [ -z "${DESC_RAW}" ]; then
-  DESC_RAW="$(printf '%s' "${HTTP_BODY}" | head -c 8192 | sed -E 's/<[^>]+>//g' | grep -v '^[[:space:]]*$' | head -5 | tr '\n' ' ' || true)"
+  META_TAG="$(printf '%s' "${HTTP_BODY}" | grep -oP '<meta[^>]*\bname="description"[^>]*>' 2>/dev/null | head -1 || true)"
+  if [ -n "${META_TAG}" ]; then
+    DESC_RAW="$(printf '%s' "${META_TAG}" | grep -oP '(?<=\bcontent=")[^"]*' 2>/dev/null | head -1 || true)"
+  fi
 fi
+
+# Removed the prior tag-strip fallback: it hashed Webflow JS/CSS header junk
+# rather than the actual plugin description, silently masking real drift.
+# Better to fail-loudly so the user sees "Could not extract" than to hash garbage.
 
 # Normalize whitespace
 DESC_NORMALIZED="$(printf '%s' "${DESC_RAW}" | tr -s '[:space:]' ' ' | sed 's/^ //;s/ $//')"

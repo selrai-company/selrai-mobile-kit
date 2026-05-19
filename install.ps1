@@ -78,10 +78,19 @@ try {
   $Response = Invoke-WebRequest -Uri $TargetUrl -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
   $Body = $Response.Content
 
-  # Extract og:description
-  $DescRaw = [regex]::Match($Body, 'property="og:description"[^>]*content="([^"]*)"').Groups[1].Value
+  # Extract og:description.
+  # The Anthropic plugin page renders as `content="..." property="og:description"`
+  # (content first), so a single property-first regex misses it. Two-pass: find
+  # the meta tag, then extract content attribute regardless of attribute order.
+  $MetaMatch = [regex]::Match($Body, '<meta[^>]*\bproperty="og:description"[^>]*>')
+  if ($MetaMatch.Success) {
+    $DescRaw = [regex]::Match($MetaMatch.Value, '\bcontent="([^"]*)"').Groups[1].Value
+  }
   if (-not $DescRaw) {
-    $DescRaw = [regex]::Match($Body, 'name="description"[^>]*content="([^"]*)"').Groups[1].Value
+    $MetaMatch = [regex]::Match($Body, '<meta[^>]*\bname="description"[^>]*>')
+    if ($MetaMatch.Success) {
+      $DescRaw = [regex]::Match($MetaMatch.Value, '\bcontent="([^"]*)"').Groups[1].Value
+    }
   }
 
   if ($DescRaw) {
