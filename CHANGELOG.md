@@ -5,6 +5,28 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.1] - 2026-05-18
+
+Hot follow-up to 0.1.0. **0.1.0 was DOA on real phones** and is superseded.
+
+### Fixed
+
+- **Critical: Expo SDK pin dropped from 55.0.24 to 54.0.34.** Found on Day 3 real-phone smoke test: store-installed Expo Go (`54.0.8` at smoke time) only supports SDK 54. Pinning to SDK 55 produced "Project is incompatible with this version of Expo Go" on first QR scan. Non-technical workshop attendees install Expo Go from the App Store / Play Store; the kit must pin to what the store currently ships, not what is `latest` on npm. SDK 55 was tagged `latest` on npm registry but Expo Go on the stores had not yet caught up.
+- 3 template `package.json` files realigned to canonical SDK 54 deps per `expo-template-blank-typescript@54.0.44`:
+  - `expo ~54.0.33`, `react 19.1.0`, `react-native 0.81.5`, `expo-status-bar ~3.0.9`
+  - `expo-router ~5.1.11` (highest stable 5.x line, peer `expo: "*"` accepts SDK 54)
+  - `@types/react ~19.1.0`, `typescript ~5.9.2`
+- `install.sh` line 16 `EXPO_SDK_PIN` and `install.ps1` line 15 `$ExpoSdkPin` both refreshed to `54.0.34`, with a comment block citing the store-Expo-Go gating rule.
+- 3 template `README.md` Stack sections refreshed to the SDK 54 dep tree.
+
+### Process change
+
+- New kit policy: SDK pin tracks the **store Expo Go**, not npm `latest`. Phase 0.3 SDK bump only after a real-phone smoke re-passes.
+
+### Verified
+
+- Real-phone smoke 2026-05-18 PM AEST: scaffold `pt-companion` on Win11 + Bun 1.3.14 on D: drive (avoiding C: pressure) + Metro on LAN `192.168.1.10:8081` + Expo Go `54.0.8` on Gian's phone. QR scanned, bundling completed, home screen rendered with the two `Pressable` buttons styled by NativeWind, both buttons fire the placeholder Alert. No errors. This is the gate v0.1.0 failed.
+
 ## [0.1.0] - 2026-05-18
 
 First Phase 0.2 ship-locked release. Workshop / Skool distributable.

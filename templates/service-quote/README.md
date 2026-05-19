@@ -16,4 +16,4 @@ Then scan the QR code with Expo Go on your phone. See `/mobile-phone-preview` if
 
 ## Stack
 
-Expo SDK 55 (pinned to 55.0.24) + React Native 0.83.6 + React 19.2 + Expo Router 55.0.x + NativeWind 4.2.x. Bun as the package manager.
+Expo SDK 54 (pinned to 54.0.34) + React Native 0.81.5 + React 19.1 + Expo Router 5.1.x + NativeWind 4.2.x. Bun as the package manager. SDK 54 is what the App Store / Play Store Expo Go currently supports; the kit re-pins to the next SDK only after store Expo Go catches up.

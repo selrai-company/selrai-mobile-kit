@@ -8,13 +8,17 @@ KIT_NAME="selrai-mobile-kit"
 KIT_VERSION="0.2.0-phase-0.2"
 REPO_URL="https://github.com/selrai-company/selrai-mobile-kit"
 
-# Hard-pinned Expo SDK. Per Gian's confirmed decision 2026-05-18.
-# Pinned to 55.0.24: latest stable on npm registry as of 2026-05-18.
-# Source: registry.npmjs.org/expo (dist-tag latest -> 55.0.24, sdk-55 -> 55.0.24).
-# Canonical SDK 55 template deps (expo-template-blank-typescript@sdk-55):
-#   expo ~55.0.24, react 19.2.0, react-native 0.83.6, expo-status-bar ~55.0.6.
-# Update only when Phase 0.3+ smoke tests pass on a new SDK.
-EXPO_SDK_PIN="55.0.24"
+# Hard-pinned Expo SDK. Per Gian's confirmed decision 2026-05-18 + Phase 0.2
+# Day 3 smoke finding 2026-05-18: pin must match what the App Store / Play
+# Store Expo Go currently supports, NOT what's `latest` on npm.
+# Store Expo Go 54.0.8 supports SDK 54 only. Pinning to SDK 55 caused
+# "Project is incompatible with this version of Expo Go" on first scan.
+# Pinned to 54.0.34 (npm dist-tag sdk-54).
+# Canonical SDK 54 template deps (expo-template-blank-typescript@sdk-54):
+#   expo ~54.0.33, react 19.1.0, react-native 0.81.5, expo-status-bar ~3.0.9.
+# Phase 0.3 reviews: bump when store Expo Go ships SDK 55 support AND
+# the kit's smoke test re-passes on a real phone.
+EXPO_SDK_PIN="54.0.34"
 
 CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 SKILLS_DIR="${CLAUDE_DIR}/skills"
