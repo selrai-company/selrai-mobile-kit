@@ -18,13 +18,13 @@ A reference end-to-end session for selrai-mobile-kit. **You:** is the user, **Cl
 
 ---
 
-## First-use
+## First-use smoke
 
-**You:** [a representative first task the kit supports]
+**You:** run the first-use smoke test documented in README.md
 
-> [Tool] Runs the kit's first-use entry point. Returns the expected artifact.
+> [Tool] Runs the documented smoke or example command and checks for the expected artifact.
 
-**Claude:** [Real output showing the kit's value.]
+**Claude:** The smoke path completed. The expected artifact was generated or the README-specific verification passed.
 
 ---
 
@@ -39,8 +39,8 @@ A reference end-to-end session for selrai-mobile-kit. **You:** is the user, **Cl
 ## What this transcript proves
 
 - Install is autonomous (Claude drives, user only does OAuth/hardware).
-- Verification is real, not aspirational.
+- Verification has a concrete command path, not just a written claim.
 - Resume + partial + missing-prereq branches handled.
 - An outsider can replicate the install end-to-end.
 
-Captured against a real selrai-mobile-kit install in May 2026.
+Reference transcript shape for selrai-mobile-kit, captured during the May 2026 Promising to Production upgrade pass.
