@@ -4,7 +4,7 @@
 
 **Who it is for:** Small business owners, tradies, and bookkeepers who run weekly cash-flow numbers in their head and want a phone-shaped view of their Xero org.
 
-**Current state:** Phase 0.2 scaffold. 1 working home screen. Both buttons show a placeholder alert. Phase 0.3 wires them to live Xero data via the bundled `xero-skills` MCP (cash-flow-forecast skill and ar-ageing-report skill).
+**Current state:** Phase 0.2 scaffold. 1 working home screen. Both buttons show a placeholder alert. Phase 0.3 wires them to live Xero data via the `xero-proxy` Cloudflare Worker (sibling repo, sits on top of `xero-skills` v0.2's Custom Connection auth + `@xeroapi/xero-mcp-server`).
 
 ## Run it
 

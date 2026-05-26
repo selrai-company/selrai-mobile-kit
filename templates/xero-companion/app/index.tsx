@@ -5,7 +5,7 @@ function handlePlaceholder(action: string) {
   console.log(`[xero-companion] placeholder tapped: ${action}`);
   Alert.alert(
     "Phase 0.3 wires this to your Xero org.",
-    `${action} will pull live data from xero-skills MCP once you customise this template.`
+    `${action} will pull live data from the xero-proxy Cloudflare Worker once paired to your Xero Custom Connection.`
   );
 }
 

@@ -5,6 +5,31 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.4.1] - 2026-05-26
+
+Doc-only hotfix on top of v0.1.4 (PR #2). No code changes. Refreshes references to match `xero-skills` v0.2.0 which shipped between v0.1.4 commit and tag time. v0.2.0 stripped the custom MCP wrapper in favour of Xero's official `@xeroapi/xero-mcp-server` (Custom Connection auth, ~$5 USD/month per org paid to Xero).
+
+### Refreshed references
+
+- `templates/xero-companion/app/index.tsx`: placeholder Alert body now points at the `xero-proxy` Cloudflare Worker (the v0.1.5 wiring path) instead of the stale "xero-skills MCP" framing.
+- `templates/xero-companion/README.md`: "Current state" line refreshed to name `xero-proxy` Worker + `@xeroapi/xero-mcp-server` lineage.
+- `README.md` Status section: adds v0.1.4.1 line explaining the doc refresh and the v0.1.5 architecture change.
+- `CHANGELOG.md` v0.1.4 entry: this section preserved (history), `xero-skills@d2919f9` SHA reference superseded by `c746b7d` (v0.2.0). Both SHAs are real history.
+
+### v0.1.5 architecture (locked, code lands separately)
+
+Per 2026-05-26 selrai-core Trinity Workflow review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
+
+- **New sibling repo:** `selrai-company/xero-proxy`. Cloudflare Worker + Durable Objects (not KV, for strong consistency). HMAC-signed requests (not bearer-in-URL). CLIENT_SECRET wrapped via CF Secrets Store. Outbound allowlist enforced in code. `/register` requires admin bearer + Turnstile token.
+- **Mobile-kit v0.1.5:** wires the 2 placeholder buttons to `xero-proxy` HMAC endpoints. Pairing skill (`/xero-companion-pair`) walks operator through a `cloud/register.sh` flow + QR-scan handoff.
+- **Ship sequence:** xero-proxy v0.0.1 stub first (HMAC path, no Xero calls) → xero-proxy v0.0.2 (Xero calls + 5 Ultron fixes) → mobile-kit v0.1.5 wires to v0.0.2.
+
+### Not changed
+
+- The xero-companion template structure (12 files, byte-shape spec-compliant per `templates/README.md`).
+- Eval set (still 12/12 PASS in rule-only mode).
+- macOS install path (still v0.1.3 state, deferred to a separate v0.1.5 commit in the same release).
+
 ## [0.1.4] - 2026-05-26
 
 Adds the 4th template `xero-companion` to bridge the [selrai-company/xero-skills](https://github.com/selrai-company/xero-skills) buy-software suite into the mobile kit. Lands the kit on Harvey's 2026-05-26 R&D priority (improve existing kits + build skill suites around buy software, Xero first).
@@ -23,7 +48,7 @@ Harvey's 2026-05-26 SELR AI Weekly Team Meeting reversed the workshop v2 Phase 3
 
 ### Remaining gaps (deferred to v0.1.5)
 
-- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 will wire them to live data via either (a) an HTTP-mode xero-skills MCP on LAN, or (b) a JSON snapshot written to a shared path by the cash-flow-forecast skill. Decision deferred.
+- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 wires them via the new `selrai-company/xero-proxy` Cloudflare Worker (architecture locked in v0.1.4.1 hotfix; see that section above for the Trinity Workflow verdict and 5 fixes).
 - **macOS install path.** Unchanged from v0.1.3. Still only verified on Win11. Workshop attendees on Mac advised to wait for v0.1.5.
 - **Real-phone smoke on xero-companion.** Gian's phone gate, deferred to next-session.
 
