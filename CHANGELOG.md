@@ -18,7 +18,7 @@ Doc-only hotfix on top of v0.1.4 (PR #2). No code changes. Refreshes references 
 
 ### v0.1.5 architecture (locked, code lands separately)
 
-Per 2026-05-26 selrai-core Trinity Workflow review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
+Per a 2026-05-26 design review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
 
 - **New sibling repo:** `selrai-company/xero-proxy`. Cloudflare Worker + Durable Objects (not KV, for strong consistency). HMAC-signed requests (not bearer-in-URL). CLIENT_SECRET wrapped via CF Secrets Store. Outbound allowlist enforced in code. `/register` requires admin bearer + Turnstile token.
 - **Mobile-kit v0.1.5:** wires the 2 placeholder buttons to `xero-proxy` HMAC endpoints. Pairing skill (`/xero-companion-pair`) walks operator through a `cloud/register.sh` flow + QR-scan handoff.
