@@ -22,7 +22,7 @@ Per a 2026-05-26 design review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
 
 - **New sibling repo:** `selrai-company/xero-proxy`. Cloudflare Worker + Durable Objects (not KV, for strong consistency). HMAC-signed requests (not bearer-in-URL). CLIENT_SECRET wrapped via CF Secrets Store. Outbound allowlist enforced in code. `/register` requires admin bearer + Turnstile token.
 - **Mobile-kit v0.1.5:** wires the 2 placeholder buttons to `xero-proxy` HMAC endpoints. Pairing skill (`/xero-companion-pair`) walks operator through a `cloud/register.sh` flow + QR-scan handoff.
-- **Ship sequence:** xero-proxy v0.0.1 stub first (HMAC path, no Xero calls) → xero-proxy v0.0.2 (Xero calls + 5 Ultron fixes) → mobile-kit v0.1.5 wires to v0.0.2.
+- **Ship sequence:** xero-proxy v0.0.1 stub first (HMAC path, no Xero calls) -> xero-proxy v0.0.2 (Xero calls + 5 design fixes) -> mobile-kit v0.1.5 wires to v0.0.2.
 
 ### Not changed
 
@@ -48,7 +48,7 @@ Harvey's 2026-05-26 SELR AI Weekly Team Meeting reversed the workshop v2 Phase 3
 
 ### Remaining gaps (deferred to v0.1.5)
 
-- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 wires them via the new `selrai-company/xero-proxy` Cloudflare Worker (architecture locked in v0.1.4.1 hotfix; see that section above for the Trinity Workflow verdict and 5 fixes).
+- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 wires them via the new `selrai-company/xero-proxy` Cloudflare Worker (architecture locked in v0.1.4.1 hotfix; see that section above for the design-review verdict and 5 fixes).
 - **macOS install path.** Unchanged from v0.1.3. Still only verified on Win11. Workshop attendees on Mac advised to wait for v0.1.5.
 - **Real-phone smoke on xero-companion.** Gian's phone gate, deferred to next-session.
 
