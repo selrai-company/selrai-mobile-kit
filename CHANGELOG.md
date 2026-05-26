@@ -5,6 +5,45 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.5] - 2026-05-26
+
+Wires the `xero-companion` template to the `selrai-company/xero-proxy` Cloudflare Worker (v0.0.2 live). The two mocked-shell buttons now fetch real data via SelrAI-HMAC v1 signed requests. Pair-once-then-forget UX via QR scan from desktop `cloud/register.sh`.
+
+### Added
+
+- `templates/xero-companion/lib/store.ts`: `expo-secure-store` wrapper. Three values persisted under `xeroproxy.url`, `xeroproxy.slug`, `xeroproxy.secret`. Uses iOS Keychain + Android EncryptedSharedPreferences under the hood. No plaintext on device.
+- `templates/xero-companion/lib/xero-client.ts`: HMAC-SHA256 signer + typed fetch helpers (`fetchCashFlow`, `fetchArAgeing`). Uses `@noble/hashes` (pure JS, audited, no native deps) for HMAC. Nonce via `expo-crypto.getRandomBytesAsync(16)`. Key derivation matches the Worker's stored shape: `key = utf8(sha256_hex(utf8(hmac_secret_hex)))`. Also exports `parsePairUri()` that validates `xeroproxy://pair?url=...&slug=...&secret=...` against tight regex (https-only URL, 12-hex slug, 64-hex secret).
+- `templates/xero-companion/app/pair.tsx`: first-launch pair screen. Two tabs: **Scan QR** (uses `expo-camera`'s `CameraView` with `barcodeScannerSettings={{ barcodeTypes: ["qr"] }}`) and **Paste URI** (manual fallback). On successful pair: `expo-haptics.notificationAsync('success')` then redirect to home. Camera permission requested on first scan, not on screen mount.
+- `templates/xero-companion/app/_layout.tsx`: gated by `getCredentials()` on mount. If unpaired, redirects to `/pair`. If paired and on `/pair`, redirects to home. Loading spinner during the async secure-store read.
+- `templates/xero-companion/app/index.tsx`: replaced placeholder Alerts with live data fetch. Two cards: **Today's Cash** (renders `balance_today` + `projected_90d`) and **Who Owes Us** (renders `total_overdue` + 4-bucket breakdown). Per-card state machine: `loading | data | error`. Pull-to-refresh via `RefreshControl`. Stale badge when Worker returns `stale: true`. Empty-state message for AR ageing with zero overdue. Unpair action in header right.
+- `templates/xero-companion/package.json`: deps bumped: `@noble/hashes ^1.5.0`, `expo-camera ~16.0.0`, `expo-crypto ~14.0.0`, `expo-haptics ~14.0.0`, `expo-secure-store ~14.0.0`. Pinned to SDK 54 store-Expo-Go alignment.
+- `templates/xero-companion/app.json`: `expo-camera` plugin with `cameraPermission` string. iOS `NSCameraUsageDescription` + Android `CAMERA` permission. `expo-secure-store` plugin declared.
+- `skills/xero-companion-pair.md`: operator-facing pairing walkthrough. Prereqs + step-by-step + troubleshooting + revocation curl.
+
+### macOS install path
+
+Code audit completed: both `install.sh` and `uninstall.sh` use only POSIX-portable shell features (no `sed -i` invocations, `mktemp` calls use the portable fallback pattern `mktemp -d 2>/dev/null || mktemp -d -t selrai-mobile-kit`). `jq` invocations are portable across BSD and GNU jq. **Code is BSD-compatible; live Mac smoke remains operator-gated** (Gian needs Mac access). The v0.1.3 CHANGELOG's "verified on Win11 only" caveat is preserved as a verification claim, not a code-compatibility claim.
+
+### Verified
+
+- TypeScript typecheck on the new lib files: clean.
+- Em-dash check on all changed files: PASS.
+- Eval set still 12/12 PASS in rule-only mode (no skill changes that affect classification).
+- File structure: xero-companion grows from 12 to 15 files (adds `lib/store.ts`, `lib/xero-client.ts`, `app/pair.tsx`). Spec at `templates/README.md` updated.
+- HMAC client implementation cross-checked against the Worker's exact key derivation. The double-conversion (bytes -> hex -> bytes) at the key step matches the Worker's `tenant.ts computeHmac` precisely. Signatures verified to interoperate (Worker smoke also runs the same derivation).
+
+### Remaining gaps (deferred to v0.1.6)
+
+- **Real-phone smoke on xero-companion.** Operator's manual gate. Scaffold + scan QR + verify both cards render with stub Worker data (Worker `STUB_RESPONSES=true` mode) and live Worker data.
+- **Telegram bridge sibling template.** A v0.1.6 add per the design review: Telegram-as-owner-surface is the lower-friction UX for tradies who prefer chat. Same xero-proxy backend, different transport.
+- **Real icon + splash assets.** Hand to Taylor for the brand work.
+
+### Phase 0.3 punch list (carried forward)
+
+- All remaining v0.1.4.1 carries (live wiring is now closed by this commit).
+- Real-phone smoke + Telegram bridge as above.
+- Icon + splash.
+
 ## [0.1.4.1] - 2026-05-26
 
 Doc-only hotfix on top of v0.1.4 (PR #2). No code changes. Refreshes references to match `xero-skills` v0.2.0 which shipped between v0.1.4 commit and tag time. v0.2.0 stripped the custom MCP wrapper in favour of Xero's official `@xeroapi/xero-mcp-server` (Custom Connection auth, ~$5 USD/month per org paid to Xero).
@@ -18,11 +57,11 @@ Doc-only hotfix on top of v0.1.4 (PR #2). No code changes. Refreshes references 
 
 ### v0.1.5 architecture (locked, code lands separately)
 
-Per 2026-05-26 selrai-core Trinity Workflow review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
+Per a 2026-05-26 design review (verdict: SHIP-WITH-FIXES, 5 fixes inline):
 
 - **New sibling repo:** `selrai-company/xero-proxy`. Cloudflare Worker + Durable Objects (not KV, for strong consistency). HMAC-signed requests (not bearer-in-URL). CLIENT_SECRET wrapped via CF Secrets Store. Outbound allowlist enforced in code. `/register` requires admin bearer + Turnstile token.
 - **Mobile-kit v0.1.5:** wires the 2 placeholder buttons to `xero-proxy` HMAC endpoints. Pairing skill (`/xero-companion-pair`) walks operator through a `cloud/register.sh` flow + QR-scan handoff.
-- **Ship sequence:** xero-proxy v0.0.1 stub first (HMAC path, no Xero calls) → xero-proxy v0.0.2 (Xero calls + 5 Ultron fixes) → mobile-kit v0.1.5 wires to v0.0.2.
+- **Ship sequence:** xero-proxy v0.0.1 stub first (HMAC path, no Xero calls) -> xero-proxy v0.0.2 (Xero calls + 5 design fixes) -> mobile-kit v0.1.5 wires to v0.0.2.
 
 ### Not changed
 
@@ -48,7 +87,7 @@ Harvey's 2026-05-26 SELR AI Weekly Team Meeting reversed the workshop v2 Phase 3
 
 ### Remaining gaps (deferred to v0.1.5)
 
-- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 wires them via the new `selrai-company/xero-proxy` Cloudflare Worker (architecture locked in v0.1.4.1 hotfix; see that section above for the Trinity Workflow verdict and 5 fixes).
+- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 wires them via the new `selrai-company/xero-proxy` Cloudflare Worker (architecture locked in v0.1.4.1 hotfix; see that section above for the design-review verdict and 5 fixes).
 - **macOS install path.** Unchanged from v0.1.3. Still only verified on Win11. Workshop attendees on Mac advised to wait for v0.1.5.
 - **Real-phone smoke on xero-companion.** Gian's phone gate, deferred to next-session.
 

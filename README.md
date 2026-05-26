@@ -59,7 +59,8 @@ Smoke-tested at `tests/uninstall_smoke.sh` (20/20 assertions PASS on Win11 + Bun
 
 **Phase 0.2 ship-locked 2026-05-19 at v0.1.3.** 4 skills + 3 templates real-phone-verified + uninstall path + template-picker security gate. Workshop / Skool distributable.
 **v0.1.4 (2026-05-26).** Adds the 4th template `xero-companion` to bridge Harvey's 2026-05-26 buy-software R&D direction (mobile companion to `selrai-company/xero-skills`). Glance at today's cash and aged receivables from your phone. Mocked shell.
-**v0.1.4.1 (2026-05-26).** Doc-only hotfix. Refreshes refs to match `xero-skills` v0.2.0 (which stripped its custom MCP wrapper and now sits on Xero's official `@xeroapi/xero-mcp-server`) and routes v0.1.5 live-data wiring to a new sibling Cloudflare Worker `selrai-company/xero-proxy` per the 2026-05-26 selrai-core Trinity review (SHIP-WITH-FIXES verdict, 5 fixes baked into the spec).
+**v0.1.4.1 (2026-05-26).** Doc-only hotfix. Refreshes refs to match `xero-skills` v0.2.0 (which stripped its custom MCP wrapper and now sits on Xero's official `@xeroapi/xero-mcp-server`) and routes v0.1.5 live-data wiring to a new sibling Cloudflare Worker `selrai-company/xero-proxy` per a 2026-05-26 design review (SHIP-WITH-FIXES verdict, 5 fixes baked into the spec).
+**v0.1.5 (2026-05-26).** Wires `xero-companion` to live Worker. Two cards (Today's Cash + Who Owes Us) fetch real data via SelrAI-HMAC v1 signed requests. Pair-once UX via QR scan from desktop `cloud/register.sh`. `expo-camera` for scan, `@noble/hashes` for HMAC, `expo-secure-store` for credential persistence. macOS install path code-audited as BSD-portable (live Mac smoke remains operator-gated).
 **Phase 0.3 (Harvey curation)** decides workshop module + Skool drop placement.
 
 See [docs/prior-art.md](docs/prior-art.md) for the wedge analysis (why we wrap the official Anthropic Expo plugin instead of rebuilding it).

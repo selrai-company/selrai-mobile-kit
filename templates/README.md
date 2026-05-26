@@ -56,6 +56,8 @@ Do not include `node_modules/`, `bun.lockb`, `ios/`, or `android/`. These are ge
 4. Update `assets/*.placeholder` notes if the vertical has a different icon shape.
 5. Write a 15-line `README.md`.
 6. Add a row to the table above.
-7. Register the new template name in `skills/mobile-template-pick.md` (ml-engineer scope).
+7. Register the new template name in `skills/mobile-template-pick.md` (template picker classifier).
 
 All 4 templates remain self-contained. No shared code. A future phase may extract a shared base; current templates ship duplicated by design.
+
+`xero-companion` is the first template with live data (v0.1.5 onward); the other three stay mocked. Adding a `lib/` subdir is allowed for templates that need a network client.
