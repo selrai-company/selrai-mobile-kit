@@ -1,19 +1,19 @@
 # selrai-mobile-kit template-picker eval harness (PowerShell mirror of run-eval.sh)
 # Reads template-picker-eval.jsonl, classifies each case via local Gemma (or rule fallback),
-# scores accuracy, prints passed=N/10. Exit 0 on >= 8/10, exit 1 otherwise.
+# scores accuracy, prints passed=N/12. Exit 0 on >= 10/12, exit 1 otherwise.
 #
 # Usage:
 #   cd selrai-mobile-kit; .\evals\run-eval.ps1
 #
 # Dependencies: ollama (optional), jq (optional, falls back to PowerShell JSON parsing)
-# Pass bar: 8/10
+# Pass bar: 10/12
 
 $ErrorActionPreference = "Stop"
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $EvalFile = Join-Path $ScriptDir "template-picker-eval.jsonl"
-$PassBar = 8
-$Total = 10
+$PassBar = 10
+$Total = 12
 
 if (-not (Test-Path $EvalFile)) {
     Write-Error "ERROR: eval file not found at $EvalFile"
@@ -58,6 +58,12 @@ function Invoke-RuleClassify {
         return "pt-companion"
     }
 
+    # Xero / accounting / bookkeeping keywords (before service-quote so bookkeeper-on-Xero
+    # without explicit trade keywords routes to xero-companion, not service-quote)
+    if ($text -match "xero|bookkeeper|bookkeeping|accountant|accounting|cash flow|cashflow|accounts receivable|aged receivables|profit and loss|balance sheet|chart of accounts") {
+        return "xero-companion"
+    }
+
     # Service-quote keywords
     if ($text -match "quote|quoting|on-site|onsite|field service|install|installation|repair|plumber|plumbing|electrician|electrical|landscaping|lawn|cleaning|tradesperson|trade|contractor|builder|maintenance|locksmith|pest control|handyman") {
         return "service-quote"
@@ -78,7 +84,7 @@ function Invoke-GemmaClassify {
     param([string]$Business, [string]$Audience, [string]$PhoneToday)
 
     $Prompt = @"
-You are a mobile app template classifier. Return ONLY one of these three exact strings with no other text: pt-companion OR service-quote OR creator-companion
+You are a mobile app template classifier. Return ONLY one of these four exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion
 
 Business: $Business
 Audience: $Audience
@@ -88,13 +94,14 @@ Rules:
 - pt-companion: fitness, personal trainer, workout, coaching clients, health tracking, exercise, gym
 - service-quote: trade, quoting, field service, on-site, installation, repair, plumbing, electrical, lawn, cleaning, invoice
 - creator-companion: content creation, social media, posting, scheduling, creator, influencer, brand, GHL, marketing
+- xero-companion: owner on Xero glancing at cash flow, accounts receivable, BAS, bookkeeping, accounting numbers from a phone
 
 Return ONLY one template name. No explanation. No punctuation.
 "@
 
     try {
         $Raw = ($Prompt | ollama run $GemmaModel 2>$null).Trim().ToLower() -replace '\s', ''
-        $Valid = @("pt-companion", "service-quote", "creator-companion")
+        $Valid = @("pt-companion", "service-quote", "creator-companion", "xero-companion")
         if ($Valid -contains $Raw) { return $Raw }
     } catch {}
 

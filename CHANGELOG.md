@@ -5,6 +5,34 @@ All notable changes to selrai-mobile-kit are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Version numbers follow [SemVer](https://semver.org/).
 
+## [0.1.4] - 2026-05-26
+
+Adds the 4th template `xero-companion` to bridge the [selrai-company/xero-skills](https://github.com/selrai-company/xero-skills) buy-software suite into the mobile kit. Lands the kit on Harvey's 2026-05-26 R&D priority (improve existing kits + build skill suites around buy software, Xero first).
+
+### Added
+
+- `templates/xero-companion/`: 12-file Expo + NativeWind scaffold matching the existing 3-template precedent. Header colour Teal-700 (#0f766e). Two NativeWind buttons: "Today's Cash" (placeholder for cash-flow-forecast skill) and "Who Owes Us" (placeholder for ar-ageing-report skill). Phase 0.3 wires both to live data from the bundled `xero-skills` MCP. Mocked-shell precedent matches `pt-companion`, `service-quote`, `creator-companion`.
+- `skills/mobile-template-pick.md`: extended from 3-way to 4-way classifier. New xero-companion keyword set (xero, bookkeeper, accountant, accounting, cash flow, accounts receivable, aged receivables, BAS, GST, P&L, balance sheet, chart of accounts, MYOB-to-Xero). Gemma prompt updated with the 4th rule. Validation list updated. New ambiguous case rule for trade-and-Xero overlap (audience=customer favours service-quote, audience=team favours xero-companion).
+- `evals/template-picker-eval.jsonl`: 2 new cases (ev-11, ev-12) covering pure xero-companion intent (owner on Xero, bookkeeper handling client Xero orgs). Total 12 cases. Pass bar 10/12.
+- `evals/run-eval.sh` + `run-eval.ps1`: rule classifier extended with xero branch (placed after PT, before service-quote, so a bookkeeper without explicit trade keywords routes to xero-companion). Gemma classifier extended with the 4th template. Validation extended.
+- README + SETUP-PROMPT + mobile-app-bootstrap skill + templates/README: all 3-template wording bumped to 4-template. Status section refreshed.
+
+### Why this template, why now
+
+Harvey's 2026-05-26 SELR AI Weekly Team Meeting reversed the workshop v2 Phase 3 priority. The new R&D spine is "improve existing kits to production grade + build skill suites around buy software (Xero first)". This template bridges the mobile kit (existing) with the xero-skills connector suite (also shipped 2026-05-26) so a buy-software glance on the phone is one of the kit's named verticals. Source-of-truth for the new R&D direction: the [Selr Kit Library dashboard](https://selr-kit-dashboard.vercel.app/).
+
+### Remaining gaps (deferred to v0.1.5)
+
+- **Live Xero data wiring.** Both `xero-companion` buttons still show placeholder Alerts (matches the 3 existing templates' Phase 0.2 precedent). v0.1.5 will wire them to live data via either (a) an HTTP-mode xero-skills MCP on LAN, or (b) a JSON snapshot written to a shared path by the cash-flow-forecast skill. Decision deferred.
+- **macOS install path.** Unchanged from v0.1.3. Still only verified on Win11. Workshop attendees on Mac advised to wait for v0.1.5.
+- **Real-phone smoke on xero-companion.** Gian's phone gate, deferred to next-session.
+
+### Phase 0.3 punch list (carried forward)
+
+- All remaining v0.1.3 Phase 0.3 items (FIND-001 npx/bun/npm fencing, real bun install smoke, macOS install path, asset replacement).
+- Live data wiring for xero-companion (see above).
+- Real-phone smoke on xero-companion (Gian's manual gate).
+
 ## [0.1.3] - 2026-05-19
 
 Closes the parity gap with the 4 hardening-lap kits: every distributable kit now has a clean uninstall path. Also closes FIND-003 from the Day 2 security re-pass.

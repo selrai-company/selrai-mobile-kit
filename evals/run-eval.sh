@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # selrai-mobile-kit template-picker eval harness
 # Reads template-picker-eval.jsonl, classifies each case via local Gemma (or rule fallback),
-# scores accuracy, prints passed=N/10. Exit 0 on >= 8/10, exit 1 otherwise.
+# scores accuracy, prints passed=N/12. Exit 0 on >= 10/12, exit 1 otherwise.
 #
 # Usage:
 #   cd selrai-mobile-kit && bash evals/run-eval.sh
 #
 # Dependencies: ollama (optional), jq
-# Pass bar: 8/10
+# Pass bar: 10/12
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EVAL_FILE="$SCRIPT_DIR/template-picker-eval.jsonl"
-PASS_BAR=8
-TOTAL=10
+PASS_BAR=10
+TOTAL=12
 
 if [ ! -f "$EVAL_FILE" ]; then
   echo "ERROR: eval file not found at $EVAL_FILE" >&2
@@ -51,17 +51,24 @@ else
 fi
 
 # Rule-based classifier
-# Returns: pt-companion | service-quote | creator-companion
+# Returns: pt-companion | service-quote | creator-companion | xero-companion
 rule_classify() {
   local business="$1"
   local audience="$2"
   local text
   text=$(echo "$business" | tr '[:upper:]' '[:lower:]')
 
-  # PT keywords
+  # PT keywords (checked first - PT industry intent dominates over backoffice glance)
   if echo "$text" | grep -qiE "trainer|training|fitness|workout|exercise|gym|client check|health coach|coaching|personal train|physiotherapy|physio|pilates|yoga instructor"; then
     # Ambiguous case: fitness + content signals both present - prefer pt-companion
     echo "pt-companion"
+    return
+  fi
+
+  # Xero / accounting / bookkeeping keywords (before service-quote so a bookkeeper-on-Xero
+  # without explicit trade keywords routes to xero-companion, not service-quote)
+  if echo "$text" | grep -qiE "xero|bookkeeper|bookkeeping|accountant|accounting|cash flow|cashflow|accounts receivable|aged receivables|profit and loss|balance sheet|chart of accounts"; then
+    echo "xero-companion"
     return
   fi
 
@@ -85,13 +92,13 @@ rule_classify() {
   fi
 }
 
-# Gemma classifier - returns one of the 3 template names or empty on failure
+# Gemma classifier - returns one of the 4 template names or empty on failure
 gemma_classify() {
   local business="$1"
   local audience="$2"
   local phone_today="$3"
 
-  local prompt="You are a mobile app template classifier. Return ONLY one of these three exact strings with no other text: pt-companion OR service-quote OR creator-companion
+  local prompt="You are a mobile app template classifier. Return ONLY one of these four exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion
 
 Business: $business
 Audience: $audience
@@ -101,14 +108,15 @@ Rules:
 - pt-companion: fitness, personal trainer, workout, coaching clients, health tracking, exercise, gym
 - service-quote: trade, quoting, field service, on-site, installation, repair, plumbing, electrical, lawn, cleaning, invoice
 - creator-companion: content creation, social media, posting, scheduling, creator, influencer, brand, GHL, marketing
+- xero-companion: owner on Xero glancing at cash flow, accounts receivable, BAS, bookkeeping, accounting numbers from a phone
 
 Return ONLY one template name. No explanation. No punctuation."
 
   local raw
   raw=$(echo "$prompt" | ollama run "$GEMMA_MODEL" 2>/dev/null | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' || true)
 
-  # Validate output is one of the 3 valid templates
-  if [[ "$raw" == "pt-companion" || "$raw" == "service-quote" || "$raw" == "creator-companion" ]]; then
+  # Validate output is one of the 4 valid templates
+  if [[ "$raw" == "pt-companion" || "$raw" == "service-quote" || "$raw" == "creator-companion" || "$raw" == "xero-companion" ]]; then
     echo "$raw"
   else
     echo ""

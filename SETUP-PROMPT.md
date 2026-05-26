@@ -19,7 +19,7 @@ If readiness passes, ask me these three questions one at a time:
 2. Do you want a customer-facing app (clients use it) or a back-of-house app (only you and your team use it)?
 3. Do you want to test on your own phone today, or do you only want to design the screens for now?
 
-Use my answers to pick one of the 3 templates (pt-companion, service-quote, creator-companion) via /mobile-template-pick.
+Use my answers to pick one of the 4 templates (pt-companion, service-quote, creator-companion, xero-companion) via /mobile-template-pick.
 
 Once a template is picked, run /mobile-app-bootstrap to scaffold it, then /mobile-phone-preview to walk me through Expo Go + QR pairing if I said yes to question 3.
 

@@ -1,8 +1,8 @@
 # Template Picker Evals
 
-Tests the `mobile-template-pick` skill's classification logic against 10 labelled cases.
+Tests the `mobile-template-pick` skill's classification logic against 12 labelled cases.
 
-Pass bar: **8/10**. Below 8 blocks ship.
+Pass bar: **10/12**. Below 10 blocks ship.
 
 ## Run (macOS / Linux)
 
@@ -20,7 +20,7 @@ cd selrai-mobile-kit
 
 ## What it tests
 
-10 cases in `template-picker-eval.jsonl`:
+12 cases in `template-picker-eval.jsonl`:
 
 | Cases | Template |
 |---|---|
@@ -28,6 +28,7 @@ cd selrai-mobile-kit
 | ev-04, ev-05, ev-06 | service-quote (trade, field service) |
 | ev-07, ev-08, ev-09 | creator-companion (social media, GHL) |
 | ev-10 | Ambiguous: fitness coaching + online programs. Expected: pt-companion |
+| ev-11, ev-12 | xero-companion (owner on Xero, bookkeeper) |
 
 ## How it classifies
 
@@ -41,9 +42,10 @@ The harness reports which method was used per case.
 ```
 ev-01  PASS                 expected=pt-companion      got=pt-companion      method=gemma
 ev-10  PASS                 expected=pt-companion      got=pt-companion      method=rules
+ev-12  PASS                 expected=xero-companion    got=xero-companion    method=rules
 ...
-passed=10/10
-RESULT: PASS (>= 8 required)
+passed=12/12
+RESULT: PASS (>= 10 required)
 ```
 
 Exit code 0 = pass. Exit code 1 = fail. Exit code 2 = missing dependency.

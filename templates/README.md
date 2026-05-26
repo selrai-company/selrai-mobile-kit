@@ -1,6 +1,6 @@
 # selrai-mobile-kit templates
 
-Three vertical scaffolds. Each is a self-contained Expo + React Native + Expo Router + NativeWind project.
+Four vertical scaffolds. Each is a self-contained Expo + React Native + Expo Router + NativeWind project.
 
 ## How mobile-app-bootstrap consumes these
 
@@ -46,8 +46,9 @@ Do not include `node_modules/`, `bun.lockb`, `ios/`, or `android/`. These are ge
 | `pt-companion` | Personal trainer: workout + client check-in | Blue (#1d4ed8) |
 | `service-quote` | On-site service: new quote + today's jobs | Green (#15803d) |
 | `creator-companion` | Content creator: daily prompt + GHL post | Purple (#7e22ce) |
+| `xero-companion` | Owner on Xero: today's cash + who owes us | Teal (#0f766e) |
 
-## Adding a 4th template in Phase 0.3
+## Adding a 5th template in a future phase
 
 1. Copy an existing template directory: `cp -r templates/pt-companion templates/<new-name>`.
 2. Update `package.json` name field, `app.json` name and slug, header colour in `app/_layout.tsx`.
@@ -57,4 +58,4 @@ Do not include `node_modules/`, `bun.lockb`, `ios/`, or `android/`. These are ge
 6. Add a row to the table above.
 7. Register the new template name in `skills/mobile-template-pick.md` (ml-engineer scope).
 
-All 4 templates remain self-contained. No shared code. Phase 0.3 may extract a shared base; Phase 0.2 ships them duplicated by design.
+All 4 templates remain self-contained. No shared code. A future phase may extract a shared base; current templates ship duplicated by design.
