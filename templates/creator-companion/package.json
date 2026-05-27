@@ -1,6 +1,6 @@
 {
   "name": "creator-companion",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -10,11 +10,16 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@noble/hashes": "^1.8.0",
     "@react-navigation/drawer": "^7.10.2",
     "expo": "~54.0.33",
+    "expo-camera": "~16.0.0",
     "expo-constants": "~18.0.13",
+    "expo-crypto": "~14.0.0",
+    "expo-haptics": "~14.0.0",
     "expo-linking": "~8.0.12",
     "expo-router": "~6.0.23",
+    "expo-secure-store": "~14.0.0",
     "expo-status-bar": "~3.0.9",
     "nativewind": "^4.2.4",
     "react": "19.1.0",

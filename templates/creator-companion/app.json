@@ -2,7 +2,7 @@
   "expo": {
     "name": "Creator Companion",
     "slug": "creator-companion",
-    "version": "0.1.0",
+    "version": "0.1.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png.placeholder",
     "splash": {
@@ -28,7 +28,14 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Creator Companion uses the camera once, to scan the pair QR your operator generated."
+        }
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
