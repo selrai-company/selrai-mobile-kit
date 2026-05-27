@@ -21,7 +21,21 @@ import { hmac } from "@noble/hashes/hmac";
 import { bytesToHex } from "@noble/hashes/utils";
 import * as Crypto from "expo-crypto";
 
+import { resolvePath, type ActionName } from "./actions";
+import { markInFlight, validateBeforeFire } from "./validate";
 import type { Credentials } from "./store";
+
+/** Thrown when the client-side gate rejects a call before the Worker sees
+ * it. Carries an optional retry-after hint so the UI can render "wait Ns"
+ * instead of an opaque error. */
+export class ActionGateError extends Error {
+  readonly retryAfterSeconds?: number;
+  constructor(reason: string, retryAfterSeconds?: number) {
+    super(reason);
+    this.name = "ActionGateError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
 
 export interface CashFlowResponse {
   slug: string;
@@ -100,20 +114,37 @@ async function signedFetch(
   });
 }
 
-export async function fetchCashFlow(creds: Credentials): Promise<CashFlowResponse> {
-  const resp = await signedFetch(creds, `/${creds.slug}/cash-flow`);
-  if (!resp.ok) {
-    throw new Error(`cash-flow failed: ${resp.status}`);
+/** Action-gated signed fetch. Runs the deterministic pre-flight gate
+ * (lib/validate.ts) before HMAC signing or any network call. On gate
+ * rejection, throws ActionGateError without burning a Worker round-trip.
+ * Caller can `instanceof` check to render a retry-after hint. */
+async function signedAction<T>(
+  action: ActionName,
+  creds: Credentials,
+): Promise<T> {
+  const gate = validateBeforeFire(action, { slug: creds.slug });
+  if (!gate.ok) {
+    throw new ActionGateError(gate.reason, gate.retryAfterSeconds);
   }
-  return (await resp.json()) as CashFlowResponse;
+  const release = markInFlight(action, creds.slug);
+  try {
+    const path = resolvePath(action, creds.slug);
+    const resp = await signedFetch(creds, path);
+    if (!resp.ok) {
+      throw new Error(`${action} failed: ${resp.status}`);
+    }
+    return (await resp.json()) as T;
+  } finally {
+    release();
+  }
+}
+
+export async function fetchCashFlow(creds: Credentials): Promise<CashFlowResponse> {
+  return signedAction<CashFlowResponse>("cash-flow.read", creds);
 }
 
 export async function fetchArAgeing(creds: Credentials): Promise<ArAgeingResponse> {
-  const resp = await signedFetch(creds, `/${creds.slug}/ar-ageing`);
-  if (!resp.ok) {
-    throw new Error(`ar-ageing failed: ${resp.status}`);
-  }
-  return (await resp.json()) as ArAgeingResponse;
+  return signedAction<ArAgeingResponse>("ar-ageing.read", creds);
 }
 
 /**

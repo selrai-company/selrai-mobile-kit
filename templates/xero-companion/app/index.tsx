@@ -12,6 +12,7 @@ import { Stack, useRouter } from "expo-router";
 
 import { getCredentials, clearCredentials } from "../lib/store";
 import {
+  ActionGateError,
   fetchCashFlow,
   fetchArAgeing,
   type CashFlowResponse,
@@ -21,7 +22,21 @@ import {
 type CardState<T> =
   | { kind: "loading" }
   | { kind: "data"; value: T }
+  | { kind: "gate"; message: string; retryAfterSeconds?: number }
   | { kind: "error"; message: string };
+
+function classifyError<T>(reason: unknown): CardState<T> {
+  if (reason instanceof ActionGateError) {
+    return {
+      kind: "gate",
+      message: reason.message,
+      retryAfterSeconds: reason.retryAfterSeconds,
+    };
+  }
+  const message =
+    reason instanceof Error ? reason.message : "Network error";
+  return { kind: "error", message };
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -47,12 +62,12 @@ export default function HomeScreen() {
     if (cfResult.status === "fulfilled") {
       setCashFlow({ kind: "data", value: cfResult.value });
     } else {
-      setCashFlow({ kind: "error", message: cfResult.reason?.message ?? "Network error" });
+      setCashFlow(classifyError<CashFlowResponse>(cfResult.reason));
     }
     if (arResult.status === "fulfilled") {
       setArAgeing({ kind: "data", value: arResult.value });
     } else {
-      setArAgeing({ kind: "error", message: arResult.reason?.message ?? "Network error" });
+      setArAgeing(classifyError<ArAgeingResponse>(arResult.reason));
     }
   }, [router]);
 
@@ -125,6 +140,8 @@ function CashFlowCard({ state }: { state: CardState<CashFlowResponse> }) {
         <View className="py-6 items-center">
           <ActivityIndicator color="#0f766e" />
         </View>
+      ) : state.kind === "gate" ? (
+        <Text className="text-amber-700 text-sm">{state.message}</Text>
       ) : state.kind === "error" ? (
         <Text className="text-red-700 text-sm">Could not load. {state.message}</Text>
       ) : (
