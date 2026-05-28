@@ -176,6 +176,8 @@ function ArAgeingCard({ state }: { state: CardState<ArAgeingResponse> }) {
         <View className="py-6 items-center">
           <ActivityIndicator color="#0f766e" />
         </View>
+      ) : state.kind === "gate" ? (
+        <Text className="text-amber-700 text-sm">{state.message}</Text>
       ) : state.kind === "error" ? (
         <Text className="text-red-700 text-sm">Could not load. {state.message}</Text>
       ) : state.value.total_overdue === 0 ? (
