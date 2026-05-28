@@ -7,7 +7,9 @@ yarn-error.log*
 
 # Bun
 .bun-cache/
+bun.lockb
 bun.lockb.bak
+bun.lock
 
 # Expo
 .expo/

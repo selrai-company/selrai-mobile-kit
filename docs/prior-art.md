@@ -1,7 +1,7 @@
 # Prior Art and Wedge Analysis
 
 **Date:** 2026-05-18
-**Author:** Gian Carlo Carino (selrai-core Trinity Workflow)
+**Author:** Gian Carlo Carino (Gian)
 **Status:** Phase 0.1 ship-locked
 
 Mandatory crawl per memory rule `repo-crawl-before-rd-kit`. Captures the landscape at kit-design time so future maintainers know what we evaluated, what we chose to wrap vs ignore vs reject.
@@ -80,11 +80,11 @@ Linked to PREMORTEM in Phase 0.1 brief. Summary here for grep-ability:
 
 | Failure | Mitigation owner | Status |
 |---|---|---|
-| Anthropic ships a "mobile starter" wizard that subsumes the kit | infra-engineer | `tools/anthropic-drift-check.sh`, per-install only per Gian 2026-05-18, lands Phase 0.2 Day 2 |
-| Expo Go device-pair friction on different wifi / corporate firewall | infra-engineer | `mobile-readiness-check` hotspot-fallback path, lands Phase 0.2 Day 2 |
-| Indirect prompt injection via fetched template or transcript | security-engineer | Templates ship in-repo, `tool-output-fencing` skill on transcript ingestion, egress allowlist in installer |
-| Expo SDK drift between install and first build | infra-engineer | Hard SDK pin per Gian 2026-05-18, installer prints drift warning |
-| Kit confused with `claude-workshop-kit` or `pt-industry-pack-workshop` | selrai-core | Value-led README (this scaffold), R&D-chat announcement, `selr-kit-index` YAML entry Phase 0.2 Day 3 |
+| Anthropic ships a "mobile starter" wizard that subsumes the kit | Gian | `tools/anthropic-drift-check.sh`, per-install only per Gian 2026-05-18, lands Phase 0.2 Day 2 |
+| Expo Go device-pair friction on different wifi / corporate firewall | Gian | `mobile-readiness-check` hotspot-fallback path, lands Phase 0.2 Day 2 |
+| Indirect prompt injection via fetched template or transcript | Gian | Templates ship in-repo, `tool-output-fencing` skill on transcript ingestion, egress allowlist in installer |
+| Expo SDK drift between install and first build | Gian | Hard SDK pin per Gian 2026-05-18, installer prints drift warning |
+| Kit confused with `claude-workshop-kit` or `pt-industry-pack-workshop` | | Value-led README (this scaffold), R&D-chat announcement, `selr-kit-index` YAML entry Phase 0.2 Day 3 |
 
 ## 7. References
 

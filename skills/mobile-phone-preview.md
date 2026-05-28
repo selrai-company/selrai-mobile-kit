@@ -122,6 +122,6 @@ Hand off to the user. No further steps required from this skill.
 
 ## References
 
-- `skills/mobile-readiness-check.md` for the LAN / hotspot pre-check (infra-engineer scope).
+- `skills/mobile-readiness-check.md` for the LAN / hotspot pre-check.
 - `templates/README.md` for the project directory shape this skill expects.
 - `SETUP-PROMPT.md` for how this skill fits into the full onboarding sequence.
