@@ -1,6 +1,6 @@
 ---
 name: mobile-template-pick
-description: "Picks one of four selrai-mobile-kit templates (pt-companion, service-quote, creator-companion, xero-companion) from three user answers. Routes through local Gemma on Ollama for classification. Falls back to deterministic keyword rules if Gemma is unavailable or returns an invalid response. Prints a one-sentence rationale then chains to /mobile-app-bootstrap."
+description: "Picks one of five selrai-mobile-kit templates (pt-companion, service-quote, creator-companion, xero-companion, stripe-companion) from three user answers. Routes through local Gemma on Ollama for classification. Falls back to deterministic keyword rules if Gemma is unavailable or returns an invalid response. Prints a one-sentence rationale then chains to /mobile-app-bootstrap."
 ---
 
 You are the template classifier for selrai-mobile-kit. You receive three answers from the user:
@@ -15,6 +15,7 @@ Your job is to pick exactly one template:
 - `service-quote` - on-site quoting, signing, payment, and booking for trade and service businesses
 - `creator-companion` - content prompt scheduling, social media planning, GHL passthrough for creators
 - `xero-companion` - owner on Xero glancing at today's cash and aged receivables from their phone
+- `stripe-companion` - MRR snapshot + failed-payment triage for subscription / SaaS operators on Stripe
 
 After picking, print: "I picked [template] because [one-sentence reason]." Then run /mobile-app-bootstrap.
 
@@ -114,7 +115,7 @@ If Gemma is available, run:
 
 **macOS / Linux:**
 ```bash
-ollama run "$GEMMA_MODEL" "You are a mobile app template classifier. Return ONLY one of these four exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion
+ollama run "$GEMMA_MODEL" "You are a mobile app template classifier. Return ONLY one of these five exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion OR stripe-companion
 
 Business: [business answer]
 Audience: [customer or team]
@@ -125,20 +126,21 @@ Rules:
 - service-quote: trade, quoting, field service, on-site, installation, repair, plumbing, electrical, lawn, cleaning, invoice
 - creator-companion: content creation, social media, posting, scheduling, creator, influencer, brand, GHL, marketing
 - xero-companion: owner on Xero glancing at cash flow, accounts receivable, BAS, bookkeeping, accounting numbers from a phone
+- stripe-companion: subscriptions, SaaS, recurring revenue, MRR, churn, failed payments, billing, Stripe, subscriber retention
 
 Return ONLY one template name. No explanation. No punctuation. No newline after."
 ```
 
 **Windows (PowerShell):**
 ```powershell
-$prompt = "You are a mobile app template classifier. Return ONLY one of these four exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion`n`nBusiness: [business answer]`nAudience: [customer or team]`nPhone test today: [true or false]`n`nRules:`n- pt-companion: fitness, personal trainer, workout, coaching clients, health tracking, exercise, gym`n- service-quote: trade, quoting, field service, on-site, installation, repair, plumbing, electrical, lawn, cleaning, invoice`n- creator-companion: content creation, social media, posting, scheduling, creator, influencer, brand, GHL, marketing`n- xero-companion: owner on Xero glancing at cash flow, accounts receivable, BAS, bookkeeping, accounting numbers from a phone`n`nReturn ONLY one template name. No explanation. No punctuation. No newline after."
+$prompt = "You are a mobile app template classifier. Return ONLY one of these five exact strings with no other text: pt-companion OR service-quote OR creator-companion OR xero-companion OR stripe-companion`n`nBusiness: [business answer]`nAudience: [customer or team]`nPhone test today: [true or false]`n`nRules:`n- pt-companion: fitness, personal trainer, workout, coaching clients, health tracking, exercise, gym`n- service-quote: trade, quoting, field service, on-site, installation, repair, plumbing, electrical, lawn, cleaning, invoice`n- creator-companion: content creation, social media, posting, scheduling, creator, influencer, brand, GHL, marketing`n- xero-companion: owner on Xero glancing at cash flow, accounts receivable, BAS, bookkeeping, accounting numbers from a phone`n- stripe-companion: subscriptions, SaaS, recurring revenue, MRR, churn, failed payments, billing, Stripe, subscriber retention`n`nReturn ONLY one template name. No explanation. No punctuation. No newline after."
 $result = $prompt | ollama run $env:GEMMA_MODEL 2>$null
 $result.Trim()
 ```
 
 Capture the output. Trim whitespace and lowercase it.
 
-**Validate the output.** The result must be exactly one of: `pt-companion`, `service-quote`, `creator-companion`, `xero-companion`. If it is not (Gemma returned an explanation, a blank, or any other text), treat it as invalid and fall through to Step 3b. Do not inform the user of the validation failure, just proceed silently to rules.
+**Validate the output.** The result must be exactly one of: `pt-companion`, `service-quote`, `creator-companion`, `xero-companion`, `stripe-companion`. If it is not (Gemma returned an explanation, a blank, or any other text), treat it as invalid and fall through to Step 3b. Do not inform the user of the validation failure, just proceed silently to rules.
 
 ---
 
@@ -157,6 +159,9 @@ Use this deterministic logic. Process in order. First match wins.
 
 **xero-companion keywords:**
 - Any of: `xero`, `bookkeeper`, `bookkeeping`, `accountant`, `accounting`, `BAS`, `GST`, `cash flow`, `cashflow`, `accounts receivable`, `accounts payable`, `AR ageing`, `aged receivables`, `invoice ledger`, `profit and loss`, `P&L`, `balance sheet`, `chart of accounts`, `MYOB-to-Xero`, `accounting numbers`
+
+**stripe-companion keywords:**
+- Any of: `stripe`, `subscription`, `subscriptions`, `subscriber`, `mrr`, `recurring revenue`, `saas`, `software as a service`, `churn`, `failed payment`, `billing`, `payment recovery`, `dunning`, `membership revenue`, `monthly recurring`
 
 **Audience tie-breaker:**
 - If no keywords matched: `audience=customer` defaults to `pt-companion`, `audience=team` defaults to `service-quote`.
@@ -181,6 +186,7 @@ Examples:
 - "I picked pt-companion because your business tracks client workouts and check-ins."
 - "I picked service-quote because your business does on-site quotes and installations."
 - "I picked creator-companion because your business schedules social content and uses GHL."
+- "I picked stripe-companion because your SaaS runs on Stripe subscriptions and you track MRR + failed payments."
 - "I picked pt-companion because your fitness coaching business benefits most from client check-in screens, even though you also sell online programs."
 - "I picked xero-companion because you run a Xero org and want a phone-shaped view of cash and who owes you."
 
