@@ -1,0 +1,63 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  templates:
+    name: Template typecheck + tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Typecheck + test every template
+        run: |
+          set -euo pipefail
+          fail=0
+          for d in templates/*/; do
+            [ -f "${d}package.json" ] || continue
+            name="$(basename "$d")"
+            echo "::group::$name"
+            (
+              cd "$d"
+              bun install --silent
+              echo "[$name] tsc --noEmit"
+              bunx tsc --noEmit
+              if ls lib/*.test.ts >/dev/null 2>&1; then
+                echo "[$name] bun test"
+                bun test
+              else
+                echo "[$name] no unit tests (mocked template)"
+              fi
+            ) || { echo "::error::$name failed"; fail=1; }
+            echo "::endgroup::"
+          done
+          exit $fail
+
+  hygiene:
+    name: Hard-rule guards (em-dash + agent attribution)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: No em-dashes in templates / skills / docs
+        run: |
+          if grep -rn $'\xe2\x80\x94' templates/ skills/ *.md 2>/dev/null; then
+            echo "ERROR: em-dash detected (Selr AI hard rule violation)"
+            exit 1
+          fi
+          echo "PASS: no em-dashes"
+      - name: No internal agent / persona names in distributable files
+        run: |
+          # Selr AI rule: internal agents stay invisible in shipped repos.
+          # Word-boundary match to avoid false hits (e.g. 'provisioning' ~ 'vision').
+          if grep -rniE "\\b(selrai-core|ui-engineer|ml-engineer|infra-engineer|security-engineer|ghl-engineer|hisoka|illumi|chrollo|feitan|shalnark|phantom troupe)\\b" \
+               templates/ skills/ *.md 2>/dev/null; then
+            echo "ERROR: internal agent/persona name detected in a distributable file"
+            exit 1
+          fi
+          echo "PASS: no internal agent names"

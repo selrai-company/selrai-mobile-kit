@@ -55,6 +55,6 @@ Do not include `node_modules/`, `bun.lockb`, `ios/`, or `android/`. These are ge
 4. Update `assets/*.placeholder` notes if the vertical has a different icon shape.
 5. Write a 15-line `README.md`.
 6. Add a row to the table above.
-7. Register the new template name in `skills/mobile-template-pick.md` (ml-engineer scope).
+7. Register the new template name in `skills/mobile-template-pick.md` (template-picker classifier).
 
 All 4 templates remain self-contained. No shared code. Phase 0.3 may extract a shared base; Phase 0.2 ships them duplicated by design.
