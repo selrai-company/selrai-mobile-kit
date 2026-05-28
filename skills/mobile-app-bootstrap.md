@@ -11,8 +11,9 @@ The previous skill (/mobile-template-pick) will have set the template name. It w
 - `pt-companion`
 - `service-quote`
 - `creator-companion`
+- `xero-companion`
 
-If no template name is present, ask: "Which template would you like? Options: pt-companion, service-quote, creator-companion."
+If no template name is present, ask: "Which template would you like? Options: pt-companion, service-quote, creator-companion, xero-companion."
 
 ## Step 1. Confirm the Anthropic expo plugin is installed
 

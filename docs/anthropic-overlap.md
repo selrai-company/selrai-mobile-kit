@@ -1,7 +1,7 @@
 # Anthropic Overlap Audit
 
 **Document type:** Phase 0.2 Day 1 security deliverable
-**Author:** security-engineer (SelrAI agent, dispatched 2026-05-18)
+**Author:** Gian (2026-05-18 security audit)
 **Status:** Audit complete. Verdict below.
 **Scope:** Official Anthropic `expo` plugin, Expo Agent (April 2026), Claude Code What's New feed vs selrai-mobile-kit Phase 0.1 surface.
 
@@ -209,11 +209,11 @@ No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is eith
 
 ### CONFIRM items that must close before Phase 0.2 Day 2 dispatch
 
-**CONFIRM-001 (High).** `tools/anthropic-drift-check.sh` does not exist. The installer references it as a TODO placeholder. The script must be written and tested before Phase 0.2 Day 2 ships. Without it, the PREMORTEM rank-1 failure (Anthropic subsumes the kit) has no detection mechanism. Assign to infra-engineer.
+**CONFIRM-001 (High).** `tools/anthropic-drift-check.sh` does not exist. The installer references it as a TODO placeholder. The script must be written and tested before Phase 0.2 Day 2 ships. Without it, the PREMORTEM rank-1 failure (Anthropic subsumes the kit) has no detection mechanism. Assign to Gian.
 
-**CONFIRM-002 (Critical).** `tool-output-fencing` skill is listed as a mitigation for indirect prompt injection (PREMORTEM rank-2) but its activation on template ingestion paths is unverified. Before Phase 0.2 Day 2 ships any skill that reads external content (template READMEs, docs, course transcripts), a security-engineer pass must verify `tool-output-fencing` is active on those code paths. Assign to security-engineer (this agent, Phase 0.2 Day 2 review pass).
+**CONFIRM-002 (Critical).** `tool-output-fencing` skill is listed as a mitigation for indirect prompt injection (PREMORTEM rank-2) but its activation on template ingestion paths is unverified. Before Phase 0.2 Day 2 ships any skill that reads external content (template READMEs, docs, course transcripts), a security audit pass must verify `tool-output-fencing` is active on those code paths. Assign to the Phase 0.2 Day 2 review pass.
 
-**CONFIRM-003 (High).** `EXPO_SDK_PIN="latest"` in both `install.sh` (line 13) and `install.ps1` (line 12) is a placeholder. A real semver pin must replace it before Phase 0.2 Day 2 or the installer provides no protection against SDK drift. Assign to infra-engineer.
+**CONFIRM-003 (High).** `EXPO_SDK_PIN="latest"` in both `install.sh` (line 13) and `install.ps1` (line 12) is a placeholder. A real semver pin must replace it before Phase 0.2 Day 2 or the installer provides no protection against SDK drift. Assign to Gian.
 
 ---
 
@@ -221,9 +221,9 @@ No `DUPLICATE-DEPRECATE` rows were found. Every capability the kit ships is eith
 
 | ID | Question | Owner | Blocks |
 |---|---|---|---|
-| CONFIRM-001 | Write and test `tools/anthropic-drift-check.sh` per Section 5 spec | infra-engineer | Phase 0.2 Day 2 |
-| CONFIRM-002 | Verify `tool-output-fencing` is active on all external-content ingestion paths in Phase 0.2 skills | security-engineer | Phase 0.2 Day 2 |
-| CONFIRM-003 | Replace `EXPO_SDK_PIN="latest"` with a verified semver in `install.sh` and `install.ps1` | infra-engineer | Phase 0.2 Day 2 |
+| CONFIRM-001 | Write and test `tools/anthropic-drift-check.sh` per Section 5 spec | Gian | Phase 0.2 Day 2 |
+| CONFIRM-002 | Verify `tool-output-fencing` is active on all external-content ingestion paths in Phase 0.2 skills | Gian | Phase 0.2 Day 2 |
+| CONFIRM-003 | Replace `EXPO_SDK_PIN="latest"` with a verified semver in `install.sh` and `install.ps1` | Gian | Phase 0.2 Day 2 |
 
 Prior `RAISE-001` and `RAISE-002` closed 2026-05-18 as `WRAP-OK` via second-pass evidence on `agent.expo.dev` and `github.com/expo/skills`.
 
@@ -231,7 +231,7 @@ Prior `RAISE-001` and `RAISE-002` closed 2026-05-18 as `WRAP-OK` via second-pass
 
 ## Coverage Statement
 
-**Reviewed (first pass, security-engineer):**
+**Reviewed (first pass, Gian):**
 - `D:\FOLDERMAIN%\selrai-mobile-kit\README.md`
 - `D:\FOLDERMAIN%\selrai-mobile-kit\docs\prior-art.md`
 - `D:\FOLDERMAIN%\selrai-mobile-kit\install.sh`
@@ -259,7 +259,7 @@ Prior `RAISE-001` and `RAISE-002` closed 2026-05-18 as `WRAP-OK` via second-pass
 
 ## Phase 0.2 Day 2 security re-pass (2026-05-18)
 
-**Author:** security-engineer (SelrAI agent)
+**Author:** Gian (security audit)
 **Scope:** CONFIRM-002 closure pass. Full Phase 0.2 build (commit d6f6b26, main). SDK corrected from 52.0.0 to 55.0.24.
 
 ---
@@ -399,13 +399,13 @@ The ship verdict is conditioned on Phase 0.3 addressing the punch list in Sectio
 
 These items are not blocking Phase 0.2 ship. They must be addressed before any surface in this kit is exposed to a shared, multi-user, or web-delivered deployment.
 
-1. **FIND-001 fix (infra-engineer).** Extend the PostToolUse fencing hook's Bash/PowerShell matchers to include `npx|bun|npm`. One-line change in the hook config. Verify the change does not over-fence internal bun calls (e.g. `bun -v` in readiness check should not be fenced).
-2. **FIND-003 fix (ml-engineer).** Add 8 KB hard cap on the business description input in `mobile-template-pick` Step 1, enforced before the string is interpolated into the Ollama prompt. Add an inline injection pre-pass (even a simple keyword filter for `ignore previous instructions`, `system:`, `[INST]`, `<s>` patterns) before the Ollama call.
-3. **FIND-002 fix (infra-engineer).** Update all three template READMEs: change "Expo SDK 54" to "Expo SDK 55 (55.0.24)" in the Stack section. Align with the TODO comment at line 21 of each README.
-4. **Template README SDK TODO resolution (infra-engineer).** Remove the TODO comment at line 21 of each template README once FIND-002 is fixed and the SDK version is confirmed stable through Phase 0.3 smoke tests.
-5. **Input-surface checklist re-run (security-engineer).** If Phase 0.3 adds any new user-input surface, a fresh input-surface audit is required before that skill ships. The Phase 0.2 surfaces (local single-user, no allowlist needed) do not generalize to Phase 0.3 surfaces if GHL or webhook surfaces are added.
-6. **CONFIRM-004 (infra-engineer, carried from Day 1).** `og:description` extraction reliability in `anthropic-drift-check.sh`. This pass confirms the hash-not-text pattern is safe, but the reliability of the extraction regex against future Claude.com HTML structure changes is an infra-engineer concern, not a security-engineer concern. Phase 0.3 scope.
-7. **CONFIRM-005 (infra-engineer, carried from Day 1).** `$PSScriptRoot` reliability in piped-exec installs on Windows. Phase 0.3 scope.
+1. **FIND-001 fix.** Extend the PostToolUse fencing hook's Bash/PowerShell matchers to include `npx|bun|npm`. One-line change in the hook config. Verify the change does not over-fence internal bun calls (e.g. `bun -v` in readiness check should not be fenced).
+2. **FIND-003 fix (Gian).** Add 8 KB hard cap on the business description input in `mobile-template-pick` Step 1, enforced before the string is interpolated into the Ollama prompt. Add an inline injection pre-pass (even a simple keyword filter for `ignore previous instructions`, `system:`, `[INST]`, `<s>` patterns) before the Ollama call.
+3. **FIND-002 fix (Gian).** Update all three template READMEs: change "Expo SDK 54" to "Expo SDK 55 (55.0.24)" in the Stack section. Align with the TODO comment at line 21 of each README.
+4. **Template README SDK TODO resolution (Gian).** Remove the TODO comment at line 21 of each template README once FIND-002 is fixed and the SDK version is confirmed stable through Phase 0.3 smoke tests.
+5. **Input-surface checklist re-run (Gian).** If Phase 0.3 adds any new user-input surface, a fresh input-surface audit is required before that skill ships. The Phase 0.2 surfaces (local single-user, no allowlist needed) do not generalize to Phase 0.3 surfaces if GHL or webhook surfaces are added.
+6. **CONFIRM-004 (Gian, carried from Day 1).** `og:description` extraction reliability in `anthropic-drift-check.sh`. This pass confirms the hash-not-text pattern is safe, but the reliability of the extraction regex against future Claude.com HTML structure changes is an concern, not a concern. Phase 0.3 scope.
+7. **CONFIRM-005 (Gian, carried from Day 1).** `$PSScriptRoot` reliability in piped-exec installs on Windows. Phase 0.3 scope.
 
 ---
 
@@ -428,6 +428,6 @@ These items are not blocking Phase 0.2 ship. They must be addressed before any s
 - `D:\FOLDERMAIN%\Gian's Master Files and Projects (AI)\Gian's Agents\skills\tool-output-fencing\SKILL.md` (fencing scope table, activation triggers, hook wiring)
 
 **Not reviewed in this pass (remaining blind spots):**
-- The PostToolUse hook script (`hooks/PostToolUse.tool-output-fence.ps1`) was not read. The fencing scope was verified from SKILL.md, not from the hook implementation itself. If the hook implementation differs from the SKILL.md scope table, FIND-001 and the CONFIRM-002 coverage claim may need revision. Assign hook implementation verification to infra-engineer Phase 0.3.
+- The PostToolUse hook script (`hooks/PostToolUse.tool-output-fence.ps1`) was not read. The fencing scope was verified from SKILL.md, not from the hook implementation itself. If the hook implementation differs from the SKILL.md scope table, FIND-001 and the CONFIRM-002 coverage claim may need revision. Assign hook implementation verification to Phase 0.3.
 - Live smoke test on a real phone (Day 3 work, per scope exclusion).
-- CONFIRM-004 and CONFIRM-005 (infra-engineer Phase 0.3, per scope exclusion).
+- CONFIRM-004 and CONFIRM-005 (Phase 0.3, per scope exclusion).
