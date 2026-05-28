@@ -14,7 +14,7 @@
  *      client-side 3-second floor stops spam at the source.
  *
  * Gate is per-process; no persistence. If the app force-quits and reopens,
- * the state resets — that is intentional, the server-side gate is the
+ * the state resets; that is intentional, the server-side gate is the
  * load-bearing check.
  *
  * Reference: The AI Automators, "Apple Just Showed Every AI Builder How

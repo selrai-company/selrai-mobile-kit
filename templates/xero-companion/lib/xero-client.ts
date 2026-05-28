@@ -14,6 +14,10 @@
  * The double conversion (bytes -> hex -> bytes) is intentional and matches the
  * Worker's stored shape. Do not skip the hex round-trip; the signatures will
  * mismatch.
+ *
+ * If you are porting this to a new client (Telegram bot, voice bridge, n8n
+ * caller, CLI), port the derivation byte-for-byte and verify against the
+ * Worker's tests/hmac-smoke.sh with a known seed before doing anything else.
  */
 
 import { sha256 } from "@noble/hashes/sha256";

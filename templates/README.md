@@ -22,7 +22,7 @@ Each template must contain:
 ```
 <template-name>/
   package.json         (Expo SDK pin + scripts)
-  app.json             (Expo config: name, slug, version 0.1.0)
+  app.json             (Expo config: name, slug, version; mocked scaffolds start at 0.1.0, live templates track the kit)
   tsconfig.json        (extends expo/tsconfig.base, strict: true)
   global.css           (Tailwind base directives)
   tailwind.config.js   (NativeWind preset)

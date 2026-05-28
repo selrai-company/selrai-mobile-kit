@@ -44,9 +44,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: No em-dashes in templates / skills / docs
+      - name: No em-dashes in templates / skills / docs / examples
         run: |
-          if grep -rn $'\xe2\x80\x94' templates/ skills/ *.md 2>/dev/null; then
+          if grep -rn $'\xe2\x80\x94' templates/ skills/ docs/ examples/ *.md 2>/dev/null; then
             echo "ERROR: em-dash detected (Selr AI hard rule violation)"
             exit 1
           fi
@@ -56,7 +56,7 @@ jobs:
           # Selr AI rule: internal agents stay invisible in shipped repos.
           # Word-boundary match to avoid false hits (e.g. 'provisioning' ~ 'vision').
           if grep -rniE "\\b(selrai-core|ui-engineer|ml-engineer|infra-engineer|security-engineer|ghl-engineer|hisoka|illumi|chrollo|feitan|shalnark|phantom troupe)\\b" \
-               templates/ skills/ *.md 2>/dev/null; then
+               templates/ skills/ docs/ examples/ *.md 2>/dev/null; then
             echo "ERROR: internal agent/persona name detected in a distributable file"
             exit 1
           fi

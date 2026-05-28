@@ -123,7 +123,7 @@ export default function PairScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               multiline={false}
-              placeholder="ghlproxy://pair?url=...&amp;slug=...&amp;secret=..."
+              placeholder="ghlproxy://pair?url=...&slug=...&secret=..."
               accessibilityLabel="Pair URI input"
             />
             <Pressable

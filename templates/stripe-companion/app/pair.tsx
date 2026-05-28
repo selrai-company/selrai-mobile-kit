@@ -123,7 +123,7 @@ export default function PairScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               multiline={false}
-              placeholder="stripeproxy://pair?url=...&amp;slug=...&amp;secret=..."
+              placeholder="stripeproxy://pair?url=...&slug=...&secret=..."
               accessibilityLabel="Pair URI input"
             />
             <Pressable
